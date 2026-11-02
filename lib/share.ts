@@ -23,9 +23,9 @@ async function shareText(fileName: string, text: string, mimeType: string): Prom
   await Sharing.shareAsync(uri, { mimeType, dialogTitle: fileName });
 }
 
-export function shareJson(data: BackupData): Promise<void> {
-  const stamp = data.exportedAt.slice(0, 10);
-  return shareText(`txk-zaxira-${stamp}.json`, JSON.stringify(data, null, 2), 'application/json');
+export function shareJson(data: BackupData, fileName?: string): Promise<void> {
+  const name = fileName ?? `txk-zaxira-${data.exportedAt.slice(0, 10)}.json`;
+  return shareText(name, JSON.stringify(data, null, 2), 'application/json');
 }
 
 export function shareCsv(name: string, csv: string): Promise<void> {

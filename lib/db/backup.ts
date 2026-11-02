@@ -9,6 +9,24 @@ import { colKey, enqueue, StorageError } from './storage';
 export type { BackupData } from './schema';
 
 export const AUTO_BACKUP_KEY = 'backup:auto';
+export const LAST_EXPORT_KEY = 'meta:lastExportAt';
+
+/** Oxirgi muvaffaqiyatli eksport vaqti (ISO) yoki null. */
+export async function getLastExportAt(): Promise<string | null> {
+  try {
+    return await AsyncStorage.getItem(LAST_EXPORT_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export async function markExported(): Promise<void> {
+  try {
+    await AsyncStorage.setItem(LAST_EXPORT_KEY, new Date().toISOString());
+  } catch {
+    // sana yozilmasa ham eksportning o'zi muvaffaqiyatli
+  }
+}
 
 export class ImportError extends Error {
   constructor(message = "Zaxira fayli noto'g'ri yoki mos emas") {
@@ -85,6 +103,57 @@ export async function importAll(json: string): Promise<void> {
       pairs.push([SETTINGS_KEY, JSON.stringify(data.settings)]);
       pairs.push([VERSION_KEY, JSON.stringify(SCHEMA_VERSION)]);
       await AsyncStorage.multiSet(pairs);
+    } catch {
+      throw new StorageError();
+    }
+  });
+}
+
+type AutoBackup = { savedAt: string; raw: Record<string, string | null> };
+
+async function readAutoBackup(): Promise<AutoBackup> {
+  const none = () => new ImportError("Avtomatik zaxira topilmadi");
+  const text = await AsyncStorage.getItem(AUTO_BACKUP_KEY);
+  if (text === null) throw none();
+  let v: unknown;
+  try {
+    v = JSON.parse(text);
+  } catch {
+    throw new ImportError("Avtomatik zaxira buzilgan");
+  }
+  if (!isObj(v) || typeof v.savedAt !== 'string' || !isObj(v.raw)) {
+    throw new ImportError("Avtomatik zaxira buzilgan");
+  }
+  const raw: Record<string, string | null> = {};
+  for (const [k, val] of Object.entries(v.raw)) {
+    if (val !== null && typeof val !== 'string') throw new ImportError("Avtomatik zaxira buzilgan");
+    raw[k] = val;
+  }
+  return { savedAt: v.savedAt, raw };
+}
+
+/** Avtomatik zaxira mavjud bo'lsa, uning sanasini qaytaradi. */
+export async function getAutoBackupInfo(): Promise<{ savedAt: string } | null> {
+  try {
+    return { savedAt: (await readAutoBackup()).savedAt };
+  } catch {
+    return null;
+  }
+}
+
+/** Oxirgi import oldidagi holatni (xom satrlar, buzilganlari ham) aynan qaytaradi. Yangi auto-zaxira yaratmaydi. */
+export async function restoreAutoBackup(): Promise<void> {
+  await enqueue(async () => {
+    const { raw } = await readAutoBackup();
+    try {
+      const sets: [string, string][] = [];
+      const removes: string[] = [];
+      for (const [k, v] of Object.entries(raw)) {
+        if (v === null) removes.push(k);
+        else sets.push([k, v]);
+      }
+      if (sets.length) await AsyncStorage.multiSet(sets);
+      if (removes.length) await AsyncStorage.multiRemove(removes);
     } catch {
       throw new StorageError();
     }

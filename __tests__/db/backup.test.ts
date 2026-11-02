@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { db, initDb } from '../../lib/db';
-import { exportAll, importAll, toCsv, ImportError } from '../../lib/db/backup';
+import { exportAll, importAll, toCsv, ImportError, restoreAutoBackup, getAutoBackupInfo } from '../../lib/db/backup';
 import { DEFAULT_SETTINGS } from '../../lib/core/defaults';
 
 beforeEach(async () => {
@@ -84,5 +84,46 @@ describe('backup', () => {
 describe('toCsv', () => {
   it('; ajratgich, BOM, qo\'shtirnoq', () => {
     expect(toCsv([{ a: 1, b: 'x;y' }])).toBe('\uFEFFa;b\r\n1;"x;y"');
+  });
+});
+
+describe('restoreAutoBackup', () => {
+  it("A ustiga B import -> restoreAutoBackup -> ma'lumot B ga qaytadi", async () => {
+    const t = (await db.tractors.list())[0];
+    await db.tractors.update(t.id, { model: 'A-model' });
+    const A = await exportAll();
+    await db.tractors.update(t.id, { model: 'B-model' });
+    const B = await exportAll();
+    await importAll(JSON.stringify(A)); // auto = B
+    expect((await db.tractors.list())[0].model).toBe('A-model');
+    await restoreAutoBackup();
+    const now = await exportAll();
+    expect({ ...now, exportedAt: '' }).toEqual({ ...B, exportedAt: '' });
+  });
+
+  it("backup:auto yo'q -> ImportError", async () => {
+    await expect(restoreAutoBackup()).rejects.toBeInstanceOf(ImportError);
+    expect(await getAutoBackupInfo()).toBeNull();
+  });
+
+  it('buzilgan xom satrlar aynan tiklanadi, yangi auto yaratilmaydi', async () => {
+    const A = await exportAll();
+    await AsyncStorage.setItem('col:tractors', '{buzuq');
+    await importAll(JSON.stringify(A));
+    const autoBefore = await AsyncStorage.getItem('backup:auto');
+    await restoreAutoBackup();
+    expect(await AsyncStorage.getItem('col:tractors')).toBe('{buzuq');
+    expect(await AsyncStorage.getItem('backup:auto')).toBe(autoBefore);
+  });
+
+  it("null qiymatlar o'chiriladi; getAutoBackupInfo savedAt qaytaradi", async () => {
+    const A = await exportAll();
+    await AsyncStorage.removeItem('col:notifications');
+    await importAll(JSON.stringify(A));
+    expect(await AsyncStorage.getItem('col:notifications')).not.toBeNull();
+    await restoreAutoBackup();
+    expect(await AsyncStorage.getItem('col:notifications')).toBeNull();
+    const info = await getAutoBackupInfo();
+    expect(typeof info?.savedAt).toBe('string');
   });
 });
