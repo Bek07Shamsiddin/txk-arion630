@@ -10,8 +10,9 @@ import type {
   Tractor,
   User,
 } from './schema';
-import { SCHEMA_VERSION } from './schema';
-import { createCollection, enqueue, readJson, writeJson } from './storage';
+import { COLLECTION_NAMES, SCHEMA_VERSION } from './schema';
+import { colKey, CorruptDataError, createCollection, enqueue, readJson, writeJson } from './storage';
+import { todayLocal } from '../core/dates';
 
 export const SETTINGS_KEY = 'doc:settings';
 export const VERSION_KEY = 'meta:schemaVersion';
@@ -52,6 +53,13 @@ export function initDb(): Promise<void> {
 async function runInit(): Promise<void> {
   const version = await readJson<number>(VERSION_KEY);
   if (version !== null) {
+    // Buzilgan kolleksiya/sozlama ishga tushirishda aniqlanishi kerak (tiklash ekraniga o'tish uchun).
+    for (const name of COLLECTION_NAMES) {
+      const v = await readJson<unknown>(colKey(name));
+      if (v !== null && !Array.isArray(v)) throw new CorruptDataError(colKey(name));
+    }
+    const st = await readJson<unknown>(SETTINGS_KEY);
+    if (st !== null && (typeof st !== 'object' || Array.isArray(st))) throw new CorruptDataError(SETTINGS_KEY);
     // Hozircha v1 yagona sxema; kelajakda saqlangan ma'lumot migratsiyasi shu yerda.
     if (version < SCHEMA_VERSION) await enqueue(() => writeJson(VERSION_KEY, SCHEMA_VERSION));
     return;
@@ -67,7 +75,7 @@ async function runInit(): Promise<void> {
     await db.tractors.insert({
       model: 'Claas Arion 630',
       serialNumber: 'NAMUNA-001',
-      registrationDate: now.slice(0, 10),
+      registrationDate: todayLocal(),
       location: '',
       operatorName: '',
       photoUri: null,

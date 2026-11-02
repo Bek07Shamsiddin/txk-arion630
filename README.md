@@ -22,9 +22,9 @@ Ilmiy yadro:
 
 | Rol | Imkoniyatlari |
 |-----|---------------|
-| Operator | moto-soat kiritish, ehtiyot qism so'rovi, mexanik chaqirish, shikast hisoboti |
-| Texnik (mexanik) | TXK yozuvi, so'rovlarni bajarish, qismlar holati |
-| Admin | foydalanuvchilar, reglament va ish turlari, qismlar, zaxira, barcha hisobotlar |
+| Operator | traktor qo'shish, moto-soat kiritish, ehtiyot qism so'rovi, mexanik chaqirish, shikast hisoboti, TXK tarixini ko'rish |
+| Texnik (mexanik) | TXK yozuvi qo'shish va oxirgisini o'chirish, mexanik so'rovlarni bajarish, ehtiyot qism so'rovi, hisobotlarni ko'rish, TXK tarixini ko'rish |
+| Admin | barcha amallar: foydalanuvchilar, reglament va ish turlari, ehtiyot qism so'rovlari holatini boshqarish (faqat admin), traktorni tahrirlash/o'chirish, hisobotlar, **zaxira (faqat admin)** |
 
 Foydalanuvchi ilova ochilganda ro'yxatdan tanlanadi (ixtiyoriy 4 xonali PIN). Bu xavfsizlik emas,
 "kim kiritdi" ni qayd etish vositasi.
@@ -36,7 +36,9 @@ buyurtma → TXK yozuvi → hisobotlar**.
 
 - **Yoqilg'i sarfi jadvali taxminiy ("tasdiqlanmagan").** Ish turlari bo'yicha boshlang'ich G
   qiymatlari adabiyot bilan tekshirilmagan. Admin ularni adabiyotdan tasdiqlab, *Reglament*
-  ekranida tahrirlashi shart; shundan keyingina keltirilgan soat ishonchli bo'ladi.
+  ekranida tahrirlashi shart; shundan keyingina keltirilgan soat ishonchli bo'ladi. K qiymatlari
+  (ish turi yoqilg'i sarfi yoki nominal sarf) o'zgartirilsa, mavjud moto-soat yozuvlarining
+  keltirilgan soati avtomatik qayta hisoblanadi.
 - **Simulyator parametrlari (λ₀, a, xarajatlar va h.k.) vaqtincha qiymatlar.** Natijalar ularga
   bog'liq. Boshlang'ich parametrlarda moslashuvchan strategiya (S2) arzonroq **emas**.
 - Natijalar **imitatsion model natijalari**, dala (real) ma'lumoti emas; real ma'lumot bilan

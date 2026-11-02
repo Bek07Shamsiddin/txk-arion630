@@ -148,6 +148,7 @@ export const uz = {
       decreasing: "Ko'rsatkich oldingisidan kam bo'lishi mumkin emas",
       date_before_last: "Sana oxirgi yozuv sanasidan oldin bo'lishi mumkin emas",
       shares_mismatch: "Ish taqsimoti soatlari yig'indisi hisoblangan ish soatiga teng bo'lishi kerak",
+      future_date: "Kelajak sanasini kiritib bo'lmaydi",
       over_24h_needs_confirm: "Sutkasiga 24 soatdan ortiq ish soati kiritilmoqda. Shunday saqlansinmi?",
     },
   },
@@ -181,6 +182,15 @@ export const uz = {
     atReading: 'Hisoblagich',
     performedBy: 'Bajargan',
     unknownLevel: "Noma'lum daraja",
+    futureDate: "Kelajak sanasini kiritib bo'lmaydi",
+    dateBeforeRegistration: "Sana traktor ro'yxatga olingan sanadan oldin bo'lishi mumkin emas",
+    unknownLevelError: "Noma'lum TXK darajasi",
+    tractorNotFound: 'Traktor topilmadi',
+    recordNotFound: 'Yozuv topilmadi',
+    onlyLatestDeletable: "Faqat traktorning oxirgi TXK yozuvini o'chirish mumkin",
+    delete: "O'chirish",
+    deleteTitle: "TXK yozuvini o'chirish",
+    deleteQuestion: "Oxirgi TXK yozuvi o'chirilsinmi?",
   },
   notifications: {
     title: 'Eslatmalar',
@@ -353,6 +363,7 @@ export const uz = {
   regAdmin: {
     title: 'Reglament sozlamalari',
     forbidden: 'Faqat administrator reglamentni tahrirlay oladi',
+    recomputed: 'ta yozuv qayta hisoblandi',
     levels: 'TXK darajalari',
     interval: 'Interval (soat)',
     duration: 'Davomiylik (soat)',
@@ -396,6 +407,7 @@ export const uz = {
   },
   backup: {
     title: 'Zaxira nusxa',
+    forbidden: "Zaxira bilan ishlash uchun ruxsat yo'q (faqat administrator)",
     export: 'Zaxira nusxa olish',
     import: 'Zaxiradan tiklash',
     restoreAuto: 'Avtomatik zaxiradan qaytarish',
@@ -413,6 +425,11 @@ export const uz = {
     restoredAuto: 'Avtomatik zaxiradan qaytarildi',
     recoveryTitle: "Ma'lumotlar buzilgan",
     recoveryHint: "Zaxira fayldan yoki avtomatik zaxiradan tiklang.",
+  },
+  notFound: {
+    title: 'Sahifa topilmadi',
+    text: 'Bunday ekran mavjud emas.',
+    home: "Bosh sahifaga o'tish",
   },
   errors: {
     corruptData: "Ma'lumotlar buzilgan. Zaxiradan tiklash kerak.",

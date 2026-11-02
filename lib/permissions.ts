@@ -1,9 +1,8 @@
 export type UserRole = 'operator' | 'technician' | 'admin';
 import { t } from './i18n/uz';
 
-/** User (active) ham, eski UserProfile (is_active) ham qabul qilinadi. */
-type UserProfile = { role: UserRole; active?: boolean; is_active?: boolean };
-const isActive = (p: UserProfile) => (p.active ?? p.is_active) === true;
+type UserProfile = { role: UserRole; active?: boolean };
+const isActive = (p: UserProfile) => p.active === true;
 
 export const Permissions = {
   canAddTractor: (profile: UserProfile | null): boolean => {

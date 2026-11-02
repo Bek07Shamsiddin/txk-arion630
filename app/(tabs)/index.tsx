@@ -31,8 +31,7 @@ export default function DashboardScreen() {
       setViews(await listTractorViews(today));
       setUnread((await db.notifications.list()).filter((n) => !n.isRead).length);
       setFailed(false);
-    } catch (e) {
-      console.error('Dashboard load failed', e);
+    } catch {
       setFailed(true);
       showMessage(t.common.error, t.errors.generic);
     } finally {

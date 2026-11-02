@@ -9,7 +9,8 @@ import { db } from '@/lib/db';
 import type { ServiceRecord, Tractor, User } from '@/lib/db/schema';
 import type { RegulationLevel } from '@/lib/core/types';
 import { byDateThenCreated } from '@/lib/services/tractors';
-import { showMessage } from '@/lib/notify';
+import { deleteServiceRecord } from '@/lib/services/service';
+import { confirmAction, showMessage } from '@/lib/notify';
 import { t } from '@/lib/i18n/uz';
 
 const fmt = (n: number) => String(Math.round(n * 100) / 100);
@@ -24,6 +25,8 @@ export default function ServiceHistoryScreen() {
   const [tractors, setTractors] = useState<Tractor[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [latestIds, setLatestIds] = useState<Set<string>>(new Set());
+  const [reloadKey, setReloadKey] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
@@ -37,6 +40,12 @@ export default function ServiceHistoryScreen() {
             db.users.list(),
           ]);
           if (!alive) return;
+          const latest = new Set<string>();
+          for (const tid of new Set(rs.map((r) => r.tractorId))) {
+            const mine = byDateThenCreated(rs.filter((r) => r.tractorId === tid));
+            latest.add(mine[mine.length - 1].id);
+          }
+          setLatestIds(latest);
           setRecords(byDateThenCreated(tractorId ? rs.filter((r) => r.tractorId === tractorId) : rs).reverse());
           setLevels(lvs);
           setTractors(trs);
@@ -50,8 +59,18 @@ export default function ServiceHistoryScreen() {
       return () => {
         alive = false;
       };
-    }, [tractorId]),
+    }, [tractorId, reloadKey]),
   );
+
+  const remove = async (r: ServiceRecord) => {
+    if (!(await confirmAction(t.service.deleteTitle, t.service.deleteQuestion))) return;
+    try {
+      await deleteServiceRecord(r.id);
+      setReloadKey((k) => k + 1);
+    } catch (e) {
+      showMessage(t.common.error, (e as Error).message || t.errors.storage);
+    }
+  };
 
   if (!Permissions.canViewServiceHistory(user)) {
     return (
@@ -117,6 +136,11 @@ export default function ServiceHistoryScreen() {
                   {t.service.performedBy}: {userName(r.userId)}
                 </Text>
               ) : null}
+              {latestIds.has(r.id) && Permissions.canAddServiceRecord(user) ? (
+                <TouchableOpacity onPress={() => remove(r)} style={styles.deleteBtn}>
+                  <Text style={styles.deleteText}>{t.service.delete}</Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
           )}
         />
@@ -164,4 +188,6 @@ const styles = StyleSheet.create({
   photos: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 },
   photo: { width: 72, height: 72, borderRadius: 6, backgroundColor: '#e5e7eb' },
   by: { fontSize: 12, color: '#9ca3af' },
+  deleteBtn: { alignSelf: 'flex-start', paddingVertical: 6 },
+  deleteText: { color: '#dc2626', fontSize: 14, fontWeight: '600' },
 });

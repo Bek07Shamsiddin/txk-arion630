@@ -81,6 +81,25 @@ describe('backup', () => {
   });
 });
 
+describe('import himoyasi', () => {
+  it('faol administratorsiz fayl rad etiladi', async () => {
+    const A = await exportAll();
+    const users = (A.collections.users as { active: boolean; role: string }[]).map((u) => ({ ...u, active: false }));
+    const before = await db.users.list();
+    await expect(importAll(JSON.stringify({ ...A, collections: { ...A.collections, users } }))).rejects.toBeInstanceOf(ImportError);
+    const ops = (A.collections.users as { role: string }[]).map((u) => ({ ...u, role: 'operator' }));
+    await expect(importAll(JSON.stringify({ ...A, collections: { ...A.collections, users: ops } }))).rejects.toBeInstanceOf(ImportError);
+    await expect(importAll(JSON.stringify({ ...A, collections: { ...A.collections, users: [] } }))).rejects.toBeInstanceOf(ImportError);
+    expect(await db.users.list()).toEqual(before);
+  });
+
+  it("bo'sh reglamentli fayl rad etiladi", async () => {
+    const A = await exportAll();
+    await expect(importAll(JSON.stringify({ ...A, collections: { ...A.collections, regulation: [] } }))).rejects.toBeInstanceOf(ImportError);
+    expect((await db.regulation.list()).length).toBeGreaterThan(0);
+  });
+});
+
 describe('toCsv', () => {
   it('; ajratgich, BOM, qo\'shtirnoq', () => {
     expect(toCsv([{ a: 1, b: 'x;y' }])).toBe('\uFEFFa;b\r\n1;"x;y"');

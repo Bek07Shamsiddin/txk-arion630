@@ -1,7 +1,8 @@
+import { todayLocal } from '../core/dates';
 import { equivalentHours } from '../core/loadFactor';
 import type { WorkShare } from '../core/types';
 import { db } from '../db';
-import { StorageError } from '../db/storage';
+import { enqueue, StorageError, writeJson, colKey } from '../db/storage';
 import type { MotoReading } from '../db/schema';
 import { refreshAlerts } from './alerts';
 import { byDateThenCreated, daysBetween } from './tractors';
@@ -11,6 +12,7 @@ export type ReadingError =
   | 'decreasing'
   | 'date_before_last'
   | 'shares_mismatch'
+  | 'future_date'
   | 'over_24h_needs_confirm';
 
 export type RecordReadingInput = {
@@ -45,6 +47,7 @@ export async function recordMotoReading(
   const lastValue = last ? last.reading : tractor.initialReading;
   const lastDate = last ? last.date : tractor.registrationDate;
 
+  if (input.date > todayLocal()) return fail('future_date');
   if (input.reading < lastValue) return fail('decreasing');
   if (last && input.date < last.date) return fail('date_before_last');
 
@@ -88,4 +91,33 @@ export async function deleteMotoReading(id: string): Promise<void> {
   const tractor = await db.tractors.get(target.tractorId);
   const today = rest.length ? rest[rest.length - 1].date : (tractor?.registrationDate ?? target.date);
   await refreshAlerts(target.tractorId, today);
+}
+
+/**
+ * Barcha yozuvlarning keltirilgan soatini joriy ish turlari/sozlamalar bilan qayta hisoblaydi.
+ * O'zgargan yozuvlar sonini qaytaradi.
+ */
+export async function recomputeEquivalentHours(): Promise<number> {
+  const changed = await enqueue(async () => {
+    const [settings, ops, all] = await Promise.all([db.settings.get(), db.operationTypes.list(), db.motoReadings.list()]);
+    let n = 0;
+    const next = all.map((r) => {
+      const sum = r.shares.reduce((s, w) => s + w.hours, 0);
+      const useFuel = r.fuelLiters !== null && sum > 0;
+      let eq: number;
+      try {
+        eq = equivalentHours(r.shares, ops, settings, useFuel ? (r.fuelLiters as number) : undefined);
+      } catch {
+        return r; // noma'lum ish turi: eski qiymat saqlanadi
+      }
+      if (Math.abs(eq - r.equivHours) < 1e-9) return r;
+      n++;
+      return { ...r, equivHours: eq };
+    });
+    if (n > 0) await writeJson(colKey('motoReadings'), next);
+    return n;
+  });
+  const today = todayLocal();
+  for (const tr of await db.tractors.list()) await refreshAlerts(tr.id, today);
+  return changed;
 }

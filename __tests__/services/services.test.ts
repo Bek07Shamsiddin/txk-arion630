@@ -1,11 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { db, initDb } from '../../lib/db';
+import { todayLocal } from '../../lib/core/dates';
 import { StorageError } from '../../lib/db/storage';
 import type { Tractor } from '../../lib/db/schema';
 import { DEFAULT_REGULATION } from '../../lib/core/defaults';
 import { refreshAlerts } from '../../lib/services/alerts';
-import { deleteMotoReading, recordMotoReading } from '../../lib/services/motoReadings';
-import { recordService } from '../../lib/services/service';
+import { deleteMotoReading, recomputeEquivalentHours, recordMotoReading } from '../../lib/services/motoReadings';
+import { deleteServiceRecord, recordService } from '../../lib/services/service';
 import {
   forecastForLevel,
   getTractorView,
@@ -227,5 +228,84 @@ describe('services', () => {
     // ekv intensivligi null -> faqat fizik
     expect(forecastForLevel(level, counter, s, { equiv: null, phys: 10 }, 100, '2026-03-10')?.days).toBe(15);
     expect(forecastForLevel(level, counter, s, { equiv: null, phys: null }, 100, '2026-03-10')).toBeNull();
+  });
+});
+
+describe("TXK yozuvini o'chirish va sana tekshiruvlari", () => {
+  const tomorrow = () => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return todayLocal(d);
+  };
+
+  test("faqat oxirgi TXK yozuvi o'chiriladi", async () => {
+    const t = await newTractor();
+    const a = await svc(t, 'O50', '2026-03-10');
+    const b = await svc(t, 'O100', '2026-03-12');
+    await expect(deleteServiceRecord(a.id)).rejects.toBeInstanceOf(StorageError);
+    await deleteServiceRecord(b.id);
+    expect((await db.serviceRecords.list()).map((r) => r.id)).toEqual([a.id]);
+    await deleteServiceRecord(a.id);
+    expect(await db.serviceRecords.list()).toEqual([]);
+    await expect(deleteServiceRecord('yoq')).rejects.toBeInstanceOf(StorageError);
+  });
+
+  test("o'chirilgach daraja holati qayta hisoblanadi", async () => {
+    const t = await newTractor();
+    await readTo245(t);
+    const rec = await svc(t, 'O50', '2026-03-16');
+    expect((await getTractorView(t.id, '2026-03-16')).statuses.some((s) => s.code === 'O50')).toBe(false);
+    await deleteServiceRecord(rec.id);
+    expect((await getTractorView(t.id, '2026-03-16')).statuses.some((s) => s.code === 'O50')).toBe(true);
+  });
+
+  test('kelajak sanali TXK yozuvi rad etiladi', async () => {
+    const t = await newTractor();
+    await expect(svc(t, 'O50', tomorrow())).rejects.toBeInstanceOf(StorageError);
+    expect(await db.serviceRecords.list()).toEqual([]);
+  });
+
+  test("ro'yxatga olinishdan oldingi sana rad etiladi", async () => {
+    const t = await newTractor(); // 2026-03-01
+    await expect(svc(t, 'O50', '2026-02-28')).rejects.toBeInstanceOf(StorageError);
+    await expect(svc(t, 'O50', '2026-03-01')).resolves.toBeTruthy();
+  });
+
+  test('kelajak sanali moto-soat rad etiladi', async () => {
+    const t = await newTractor();
+    expect(await read(t, tomorrow(), 10)).toEqual({ ok: false, error: 'future_date' });
+    expect(await db.motoReadings.list()).toEqual([]);
+  });
+});
+
+describe('recomputeEquivalentHours', () => {
+  test("Haydash yoqilg'i sarfi o'zgarsa keltirilgan soat qayta hisoblanadi", async () => {
+    const t = await newTractor();
+    const res = await recordMotoReading({
+      tractorId: t.id,
+      date: '2026-03-05',
+      reading: 10,
+      shares: [{ operationTypeId: 'plowing', hours: 10 }],
+      fuelLiters: null,
+      note: null,
+      userId: 'u1',
+    });
+    expect(res.ok).toBe(true);
+    expect((await db.motoReadings.list())[0].equivHours).toBeCloseTo((10 * 24) / 18);
+    expect(await recomputeEquivalentHours()).toBe(0);
+    const ops = await db.operationTypes.list();
+    await db.operationTypes.replaceAll(ops.map((o) => (o.id === 'plowing' ? { ...o, fuelLph: 27 } : o)));
+    expect(await recomputeEquivalentHours()).toBe(1);
+    expect((await db.motoReadings.list())[0].equivHours).toBeCloseTo((10 * 27) / 18);
+    expect((await getTractorView(t.id, '2026-03-05')).totalEquivHours).toBeCloseTo(15);
+  });
+
+  test("nominalFuelLph o'zgarishi ham hisobga olinadi", async () => {
+    const t = await newTractor();
+    await read(t, '2026-03-05', 10);
+    const s = await db.settings.get();
+    await db.settings.set({ ...s, nominalFuelLph: 36 });
+    expect(await recomputeEquivalentHours()).toBe(1);
+    expect((await db.motoReadings.list())[0].equivHours).toBeCloseTo(5);
   });
 });

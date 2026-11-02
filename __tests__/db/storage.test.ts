@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { enqueue, createCollection, StorageError, CorruptDataError, newId } from '../../lib/db/storage';
 import { db, initDb } from '../../lib/db';
+import { todayLocal } from '../../lib/core/dates';
 
 type Item = { id: string; name: string; n?: number };
 
@@ -80,5 +81,25 @@ describe('initDb', () => {
     expect((await db.regulation.list()).length).toBeGreaterThan(0);
     expect((await db.operationTypes.list()).length).toBeGreaterThan(0);
     expect((await db.settings.get()).gamma).toBe(1);
+  });
+
+  it("buzilgan col:tractors ishga tushirishda CorruptDataError beradi", async () => {
+    await initDb();
+    await AsyncStorage.setItem('col:tractors', '{buzuq');
+    await expect(initDb()).rejects.toBeInstanceOf(CorruptDataError);
+  });
+
+  it("massiv bo'lmagan kolleksiya va buzilgan sozlama ham aniqlanadi", async () => {
+    await initDb();
+    await AsyncStorage.setItem('col:motoReadings', '{"a":1}');
+    await expect(initDb()).rejects.toBeInstanceOf(CorruptDataError);
+    await AsyncStorage.setItem('col:motoReadings', '[]');
+    await AsyncStorage.setItem('doc:settings', 'xx');
+    await expect(initDb()).rejects.toBeInstanceOf(CorruptDataError);
+  });
+
+  it('seed traktor sanasi mahalliy bugungi sana', async () => {
+    await initDb();
+    expect((await db.tractors.list())[0].registrationDate).toBe(todayLocal());
   });
 });

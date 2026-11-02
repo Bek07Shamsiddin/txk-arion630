@@ -115,7 +115,10 @@ export default function AddServiceRecordScreen() {
   const submit = async () => {
     if (!user || !view || !levelCode) return;
     const e: Record<string, string> = {};
-    if (!isIsoDate(date.trim())) e.date = t.service.badDate;
+    const d = date.trim();
+    if (!isIsoDate(d)) e.date = t.service.badDate;
+    else if (d > todayLocal()) e.date = t.service.futureDate;
+    else if (d < view.tractor.registrationDate) e.date = t.service.dateBeforeRegistration;
     const dur = parseDecimal(duration);
     if (dur === null || dur < 0) e.duration = t.service.badNumber;
     const used = parseUsedParts(parts);
@@ -152,7 +155,14 @@ export default function AddServiceRecordScreen() {
         <ScrollView contentContainerStyle={styles.scroll}>
           <View style={styles.group}>
             <Text style={styles.label}>{t.hours.tractor}</Text>
-            <TractorPicker views={views} selectedId={tractorId} onSelect={setTractorId} />
+            <TractorPicker views={views} selectedId={tractorId} onSelect={(id) => {
+                if (id === tractorId) return;
+                // Traktor almashganda daraja qayta tanlanadi: yangi traktorning tavsiya etilgani oldindan tanlanadi.
+                setTractorId(id);
+                setLevelCode(null);
+                setPicked(false);
+              }}
+            />
           </View>
 
           {view ? (

@@ -9,7 +9,6 @@ type SessionUser = ReturnType<typeof useSession>['user'];
 type Item = { label: string; path: string; visible: (u: SessionUser) => boolean };
 
 const always = () => true;
-// Yangi ekranlar (simulator, regulation-admin, backup) keyingi vazifalarda qo'shiladi.
 const ITEMS: Item[] = [
   { label: t.menu.hoursLog, path: '/add-moto-hours', visible: (u) => Permissions.canLogMotoHours(u) },
   { label: t.menu.service, path: '/service-history', visible: (u) => Permissions.canViewServiceHistory(u) },
@@ -23,7 +22,7 @@ const ITEMS: Item[] = [
   { label: t.menu.profile, path: '/profile', visible: always },
   { label: t.menu.simulator, path: '/simulator', visible: always },
   { label: t.menu.regulation, path: '/regulation-admin', visible: (u) => Permissions.isAdmin(u) },
-  { label: t.menu.backup, path: '/backup', visible: always },
+  { label: t.menu.backup, path: '/backup', visible: (u) => Permissions.isAdmin(u) },
   { label: t.menu.users, path: '/users-admin', visible: (u) => Permissions.isAdmin(u) },
 ];
 

@@ -8,6 +8,7 @@ import { db, type StoredRegulationLevel } from '@/lib/db';
 import type { CoreSettings, OperationType } from '@/lib/core/types';
 import { todayLocal } from '@/lib/core/dates';
 import { refreshAlerts } from '@/lib/services/alerts';
+import { recomputeEquivalentHours } from '@/lib/services/motoReadings';
 import {
   buildLevelEdit,
   buildOpTypeEdit,
@@ -120,14 +121,16 @@ export default function RegulationAdminScreen() {
     for (const tr of await db.tractors.list()) await refreshAlerts(tr.id, today);
   };
 
-  const guarded = async (scope: string, work: () => Promise<boolean>) => {
+  /** Ish turlari yoki sozlamalar o'zgarsa, mavjud yozuvlarning keltirilgan soati qayta hisoblanadi. */
+  const guarded = async (scope: string, work: () => Promise<boolean>, recompute = false) => {
     if (saving) return;
     setSaving(true);
     try {
       if (await work()) {
+        const n = recompute ? await recomputeEquivalentHours() : null;
         await refreshAll();
         await load();
-        showMessage(t.regAdmin.saved, '');
+        showMessage(t.regAdmin.saved, n === null ? '' : `${n} ${t.regAdmin.recomputed}`);
       } else {
         showMessage(t.common.error, t.regAdmin.fixErrors);
       }
@@ -158,7 +161,7 @@ export default function RegulationAdminScreen() {
       if (!r.value) return false;
       await db.operationTypes.update(o.id, r.value);
       return true;
-    });
+    }, true);
 
   const addOp = () =>
     guarded('newOp', async () => {
@@ -173,7 +176,7 @@ export default function RegulationAdminScreen() {
       await db.operationTypes.replaceAll([...ops, r.value]);
       setNewOp(EMPTY_NEW);
       return true;
-    });
+    }, true);
 
   const removeOp = async (o: OperationType) => {
     if (saving) return;
@@ -185,6 +188,7 @@ export default function RegulationAdminScreen() {
       }
       if (!(await confirmAction(t.regAdmin.deleteOp, t.regAdmin.deleteOpConfirm))) return;
       await db.operationTypes.remove(o.id);
+      await recomputeEquivalentHours();
       await refreshAll();
       await load();
     } catch (e) {
@@ -199,7 +203,7 @@ export default function RegulationAdminScreen() {
       if (!r.value) return false;
       await db.settings.set(r.value);
       return true;
-    });
+    }, true);
 
   const patchLevel = (id: string, f: (x: LevelForm) => LevelForm) =>
     setLevelForms((prev) => ({ ...prev, [id]: f(prev[id]) }));

@@ -70,6 +70,9 @@ function parseAndValidate(json: string): BackupData {
     }
     cols[name] = items;
   }
+  const hasActiveAdmin = cols.users.some((u) => isObj(u) && u.role === 'admin' && u.active === true);
+  if (!hasActiveAdmin) throw new ImportError("Zaxirada faol administrator yo'q");
+  if (cols.regulation.length === 0) throw new ImportError("Zaxirada reglament darajalari yo'q");
   let settings: CoreSettings = { ...DEFAULT_SETTINGS };
   if (raw.settings !== undefined) {
     if (!isObj(raw.settings)) throw new ImportError();
