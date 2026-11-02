@@ -101,5 +101,5 @@ export function toCsv(rows: Record<string, unknown>[]): string {
   const headers: string[] = [];
   for (const r of rows) for (const k of Object.keys(r)) if (!headers.includes(k)) headers.push(k);
   const lines = [headers.map(csvCell).join(';'), ...rows.map((r) => headers.map((h) => csvCell(r[h])).join(';'))];
-  return 'FEFF' + lines.join('\r\n');
+  return '\uFEFF' + lines.join('\r\n');
 }
