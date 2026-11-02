@@ -52,7 +52,7 @@ function parseAndValidate(json: string): BackupData {
     }
     cols[name] = items;
   }
-  let settings: CoreSettings | undefined;
+  let settings: CoreSettings = { ...DEFAULT_SETTINGS };
   if (raw.settings !== undefined) {
     if (!isObj(raw.settings)) throw new ImportError();
     for (const k of Object.keys(DEFAULT_SETTINGS)) {
@@ -71,11 +71,13 @@ function parseAndValidate(json: string): BackupData {
 
 export async function importAll(json: string): Promise<void> {
   const data = parseAndValidate(json);
-  // Joriy holat avtomatik zaxiraga yoziladi, so'ng hammasi bir yo'la almashtiriladi.
-  const current = JSON.stringify(await exportAll());
   await enqueue(async () => {
     try {
-      await AsyncStorage.setItem(AUTO_BACKUP_KEY, current);
+      // Joriy holat xom satrlar sifatida (buzilgan kalitlar ham o'zgarishsiz) saqlanadi.
+      const keys = [...COLLECTION_NAMES.map(colKey), SETTINGS_KEY, VERSION_KEY];
+      const raw: Record<string, string | null> = {};
+      for (const [k, v] of await AsyncStorage.multiGet(keys)) raw[k] = v;
+      await AsyncStorage.setItem(AUTO_BACKUP_KEY, JSON.stringify({ savedAt: new Date().toISOString(), raw }));
       const pairs: [string, string][] = COLLECTION_NAMES.map((n) => [
         colKey(n),
         JSON.stringify(data.collections[n]),

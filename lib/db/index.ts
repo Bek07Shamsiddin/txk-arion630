@@ -39,7 +39,17 @@ export const db = {
 };
 
 /** Birinchi ishga tushirishda boshlang'ich ma'lumotlarni yozadi; keyingilarida hech narsa qo'shmaydi. */
-export async function initDb(): Promise<void> {
+let initInFlight: Promise<void> | null = null;
+export function initDb(): Promise<void> {
+  if (!initInFlight) {
+    initInFlight = runInit().finally(() => {
+      initInFlight = null;
+    });
+  }
+  return initInFlight;
+}
+
+async function runInit(): Promise<void> {
   const version = await readJson<number>(VERSION_KEY);
   if (version !== null) {
     // Hozircha v1 yagona sxema; kelajakda saqlangan ma'lumot migratsiyasi shu yerda.

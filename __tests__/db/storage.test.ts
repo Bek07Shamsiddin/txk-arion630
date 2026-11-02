@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createCollection, StorageError, CorruptDataError, newId } from '../../lib/db/storage';
+import { enqueue, createCollection, StorageError, CorruptDataError, newId } from '../../lib/db/storage';
 import { db, initDb } from '../../lib/db';
 
 type Item = { id: string; name: string; n?: number };
@@ -44,6 +44,13 @@ describe('createCollection', () => {
     expect(new Set(all.map((x) => x.id)).size).toBe(20);
   });
 
+  it("rad etilgan navbat vazifasi keyingilarni to'sib qo'ymaydi", async () => {
+    const c = createCollection<Item>('items');
+    await expect(enqueue(() => Promise.reject(new Error('x')))).rejects.toThrow('x');
+    await c.insert({ name: 'a' });
+    expect(await c.list()).toHaveLength(1);
+  });
+
   it('replaceAll', async () => {
     const c = createCollection<Item>('items');
     await c.insert({ name: 'a' });
@@ -57,6 +64,12 @@ describe('createCollection', () => {
 });
 
 describe('initDb', () => {
+  it('bir vaqtdagi chaqiruvlar ikki marta seed qilmaydi', async () => {
+    await Promise.all([initDb(), initDb()]);
+    expect(await db.tractors.list()).toHaveLength(1);
+    expect(await db.users.list()).toHaveLength(1);
+  });
+
   it('ikki marta chaqirilsa seed takrorlanmaydi', async () => {
     await initDb();
     await initDb();

@@ -33,7 +33,7 @@ describe('backup', () => {
     const a = await exportAll();
     const { schemaVersion, settings, ...v0 } = a;
     await importAll(JSON.stringify(v0));
-    expect(await db.settings.get()).toEqual(DEFAULT_SETTINGS);
+    expect(JSON.parse((await AsyncStorage.getItem('doc:settings')) as string)).toEqual(DEFAULT_SETTINGS);
     expect(await db.tractors.list()).toHaveLength(1);
   });
 
@@ -42,7 +42,42 @@ describe('backup', () => {
     await importAll(JSON.stringify(a));
     const raw = await AsyncStorage.getItem('backup:auto');
     expect(raw).toBeTruthy();
-    expect(JSON.parse(raw as string).collections.tractors).toHaveLength(1);
+    expect(JSON.parse(JSON.parse(raw as string).raw['col:tractors'])).toHaveLength(1);
+  });
+
+  it('backup:auto OLDINGI holatni saqlaydi', async () => {
+    const A = await exportAll();
+    const t = (await db.tractors.list())[0];
+    await db.tractors.update(t.id, { model: 'B-model' });
+    await importAll(JSON.stringify(A));
+    const auto = JSON.parse((await AsyncStorage.getItem('backup:auto')) as string);
+    expect(JSON.parse(auto.raw['col:tractors'])[0].model).toBe('B-model');
+    expect((await db.tractors.list())[0].model).toBe('Claas Arion 630');
+  });
+
+  it("validatsiyadan o'tmagan import ma'lumotni va backup:auto ni o'zgartirmaydi", async () => {
+    const A = await exportAll();
+    const bad = { ...A, collections: { ...A.collections, tractors: 'yoq' } };
+    const before = await AsyncStorage.getAllKeys();
+    await expect(importAll(JSON.stringify(bad))).rejects.toBeInstanceOf(ImportError);
+    expect(await AsyncStorage.getItem('backup:auto')).toBeNull();
+    expect(await db.tractors.list()).toHaveLength(1);
+    expect(await AsyncStorage.getAllKeys()).toEqual(before);
+  });
+
+  it("settings yo'q v1 fayl -> default yoziladi", async () => {
+    const { settings, ...noSettings } = await exportAll();
+    await importAll(JSON.stringify(noSettings));
+    expect(JSON.parse((await AsyncStorage.getItem('doc:settings')) as string)).toEqual(DEFAULT_SETTINGS);
+  });
+
+  it("joriy kalit buzilgan bo'lsa ham import ishlaydi", async () => {
+    const A = await exportAll();
+    await AsyncStorage.setItem('col:tractors', '{buzuq');
+    await importAll(JSON.stringify(A));
+    expect(await db.tractors.list()).toHaveLength(1);
+    const auto = JSON.parse((await AsyncStorage.getItem('backup:auto')) as string);
+    expect(auto.raw['col:tractors']).toBe('{buzuq');
   });
 });
 
