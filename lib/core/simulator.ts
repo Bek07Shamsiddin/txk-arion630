@@ -70,6 +70,8 @@ const NON_NEGATIVE: (keyof SimParams)[] = [
   'repairDays',
 ];
 
+const INTEGER: (keyof SimParams)[] = ['tractors', 'seasonDays', 'runs', 'leadDays', 'repairDays'];
+
 /** Parametrlarni tekshiradi; bo'sh obyekt — hammasi to'g'ri. */
 export function validateSimParams(p: SimParams): Record<string, string> {
   const e: Record<string, string> = {};
@@ -82,6 +84,9 @@ export function validateSimParams(p: SimParams): Record<string, string> {
   }
   if (!inRange(p.runs, 1, 1000)) e.runs = "Takrorlar soni 1 dan 1000 gacha bo'lishi kerak";
   if (!inRange(p.beta, 0, 1)) e.beta = "β 0 dan 1 gacha bo'lishi kerak";
+  for (const k of INTEGER) {
+    if (!e[k] && !Number.isInteger(p[k])) e[k] = "Qiymat butun son bo'lishi kerak";
+  }
   if (!(p.intervalHours > 0)) e.intervalHours = "TXK intervali noldan katta bo'lishi kerak";
   if (!Number.isFinite(p.seed)) e.seed = "Seed son bo'lishi kerak";
   for (const k of NON_NEGATIVE) {
@@ -99,7 +104,7 @@ export function validateSimParams(p: SimParams): Record<string, string> {
 type Draws = { hours: Float64Array; mixIdx: Int32Array; u: Float64Array };
 type Totals = { work: number; serviceHours: number; downtime: number; failures: number; services: number };
 type RunMetrics = { readiness: number; failures: number; services: number; downtimeHours: number; totalCost: number };
-type Model = { p: SimParams; s: CoreSettings; k: number[]; wearK: number[]; mu: number };
+type Model = { p: SimParams; s: CoreSettings; k: number[]; wearK: number[]; mu: number; muPhys: number };
 
 /** Ish soati U(min,max), ish turi (mix bo'yicha) va nosozlik uchun u — har kun bir marta. */
 function drawRun(p: SimParams, seed: number): Draws {
@@ -152,7 +157,7 @@ function runTractor(m: Model, d: Draws, offset: number, adaptive: boolean, t: To
     t.work += hours;
     if (arrival === null) {
       const order = adaptive
-        ? equiv >= H || phys >= s.gamma * H || (H - equiv) / m.mu <= p.leadDays + s.reorderBufferDays
+        ? Math.min((H - equiv) / m.mu, (s.gamma * H - phys) / m.muPhys) <= p.leadDays + s.reorderBufferDays
         : phys >= H;
       if (order) arrival = day + p.leadDays;
     }
@@ -188,7 +193,7 @@ function buildModel(p: SimParams, ops: OperationType[], s: CoreSettings): Model 
   const meanHours = (p.dailyHoursMin + p.dailyHoursMax) / 2;
   // μ: rejalashtiruvchi β ni bilmaydi, shuning uchun K (β = 1) ishlatiladi.
   const mu = meanHours * p.operationMix.reduce((acc, mx, j) => acc + mx.share * k[j], 0);
-  return { p, s, k, wearK: k.map((x) => x ** p.beta), mu };
+  return { p, s, k, wearK: k.map((x) => x ** p.beta), mu, muPhys: meanHours };
 }
 
 async function runAll(
