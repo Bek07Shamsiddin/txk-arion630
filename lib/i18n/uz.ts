@@ -1,0 +1,52 @@
+export const uz = {
+  common: {
+    loading: 'Yuklanmoqda...',
+    save: 'Saqlash',
+    cancel: 'Bekor qilish',
+    add: "Qo'shish",
+    back: 'Orqaga',
+    error: 'Xatolik',
+    yes: 'Ha',
+    no: "Yo'q",
+  },
+  roles: {
+    operator: 'Operator',
+    technician: 'Texnik',
+    admin: 'Administrator',
+  },
+  session: {
+    selectUserTitle: 'Foydalanuvchini tanlang',
+    selectUserHint: 'Davom etish uchun o‘zingizni tanlang',
+    enterPin: 'PIN kodni kiriting',
+    pinPlaceholder: '4 xonali PIN',
+    signIn: 'Kirish',
+    signOut: 'Chiqish',
+    wrongPin: "PIN noto'g'ri",
+    noUsers: "Foydalanuvchilar yo'q",
+  },
+  users: {
+    title: 'Foydalanuvchilar',
+    add: "Foydalanuvchi qo'shish",
+    name: 'Ism',
+    namePlaceholder: 'Ism-familiya',
+    role: 'Rol',
+    pinOptional: "PIN (ixtiyoriy, 4 raqam)",
+    setPin: "PIN o'rnatish",
+    clearPin: "PINni olib tashlash",
+    hasPin: 'PIN bor',
+    noPin: "PIN yo'q",
+    activate: 'Faollashtirish',
+    deactivate: 'Faolsizlantirish',
+    inactive: 'Faol emas',
+    adminOnly: 'Bu bo‘lim faqat administrator uchun',
+    nameRequired: 'Ismni kiriting',
+    pinInvalid: "PIN aynan 4 ta raqamdan iborat bo'lishi kerak",
+    lastAdmin: "Oxirgi faol administratorni o'zgartirib bo'lmaydi",
+  },
+  errors: {
+    corruptData: "Ma'lumotlar buzilgan. Zaxiradan tiklash kerak.",
+    storage: "Ma'lumotni saqlab bo'lmadi",
+  },
+} as const;
+
+export const t = uz;

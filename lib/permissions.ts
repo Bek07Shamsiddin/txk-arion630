@@ -1,4 +1,9 @@
-import { UserRole, UserProfile } from './auth';
+import type { UserRole } from './auth';
+import { t } from './i18n/uz';
+
+/** User (active) ham, eski UserProfile (is_active) ham qabul qilinadi. */
+type UserProfile = { role: UserRole; active?: boolean; is_active?: boolean };
+const isActive = (p: UserProfile) => (p.active ?? p.is_active) === true;
 
 export const Permissions = {
   canAddTractor: (profile: UserProfile | null): boolean => {
@@ -22,7 +27,7 @@ export const Permissions = {
   },
 
   canViewServiceHistory: (profile: UserProfile | null): boolean => {
-    return !!profile && profile.is_active;
+    return !!profile && isActive(profile);
   },
 
   canRequestParts: (profile: UserProfile | null): boolean => {
@@ -54,25 +59,20 @@ export const Permissions = {
   },
 
   isAdmin: (profile: UserProfile | null): boolean => {
-    return profile?.role === 'admin' && profile.is_active === true;
+    return profile?.role === 'admin' && isActive(profile);
   },
 
   isTechnician: (profile: UserProfile | null): boolean => {
-    return profile?.role === 'technician' && profile.is_active === true;
+    return profile?.role === 'technician' && isActive(profile);
   },
 
   isOperator: (profile: UserProfile | null): boolean => {
-    return profile?.role === 'operator' && profile.is_active === true;
+    return profile?.role === 'operator' && isActive(profile);
   },
 };
 
 export function getRoleName(role: UserRole): string {
-  const roleNames: Record<UserRole, string> = {
-    operator: 'Operator',
-    technician: 'Technician',
-    admin: 'Administrator',
-  };
-  return roleNames[role];
+  return t.roles[role];
 }
 
 export function getRoleColor(role: UserRole): string {

@@ -1,5 +1,5 @@
-import { createContext, useContext } from 'react';
-import { Session, User } from '@supabase/supabase-js';
+// Moslik qatlami: eski ekranlar useAuth() ni o'qiydi. Yangi kod useSession() ishlatadi.
+import { useSession } from './session';
 
 export type UserRole = 'operator' | 'technician' | 'admin';
 
@@ -14,23 +14,18 @@ export interface UserProfile {
   updated_at: string;
 }
 
-export interface AuthContextType {
-  session: Session | null;
-  user: User | null;
-  profile: UserProfile | null;
-  loading: boolean;
-  signIn: (phone: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (phone: string, password: string, name: string, role: UserRole) => Promise<{ error: Error | null }>;
-  signOut: () => Promise<void>;
-  refreshProfile: () => Promise<void>;
-}
-
-export const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
 export function useAuth() {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
+  const { user, loading, signOut, refresh } = useSession();
+  const profile: UserProfile | null = user
+    ? {
+        id: user.id,
+        name: user.name,
+        role: user.role,
+        is_active: user.active,
+        phone: '',
+        created_at: user.createdAt,
+        updated_at: user.createdAt,
+      }
+    : null;
+  return { session: user, user, profile, loading, signOut, refreshProfile: refresh };
 }

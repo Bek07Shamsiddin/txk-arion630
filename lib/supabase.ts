@@ -1,10 +1,9 @@
-import { createClient } from '@supabase/supabase-js';
+// Supabase olib tashlandi. Eski ekranlar import qilishi mumkin, lekin ishlatilganda xato beradi.
+const fail = (): never => {
+  throw new Error('Supabase olib tashlandi');
+};
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
-}
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase: any = new Proxy(function () {}, {
+  get: () => fail(),
+  apply: () => fail(),
+});
