@@ -21,8 +21,16 @@ export default function SelectUserScreen() {
   }, []);
 
   const submit = async (u: User, p: string | null) => {
-    const ok = await signIn(u.id, p);
-    if (!ok) setError(t.session.wrongPin);
+    try {
+      const ok = await signIn(u.id, p);
+      if (!ok) {
+        setError(t.session.wrongPin);
+        setPin('');
+      }
+    } catch {
+      setError(t.errors.generic);
+      setPin('');
+    }
     // Muvaffaqiyatda root layout /(tabs) ga yo'naltiradi.
   };
 

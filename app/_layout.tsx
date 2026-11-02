@@ -9,7 +9,7 @@ import { CorruptDataError } from '@/lib/db/storage';
 import { t } from '@/lib/i18n/uz';
 
 function errorMessage(e: Error): string {
-  return e instanceof CorruptDataError ? t.errors.corruptData : e.message;
+  return e instanceof CorruptDataError ? t.errors.corruptData : t.errors.generic;
 }
 
 function ErrorView({ message }: { message: string }) {

@@ -45,6 +45,7 @@ export const uz = {
   },
   errors: {
     corruptData: "Ma'lumotlar buzilgan. Zaxiradan tiklash kerak.",
+    generic: "Kutilmagan xatolik yuz berdi",
     storage: "Ma'lumotni saqlab bo'lmadi",
   },
 } as const;

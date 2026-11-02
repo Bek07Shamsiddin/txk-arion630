@@ -7,11 +7,11 @@ import type { User } from '@/lib/db/schema';
 import { useSession } from '@/lib/session';
 import { hashPin } from '@/lib/sessionStore';
 import { Permissions } from '@/lib/permissions';
+import { canDemoteOrDeactivate, isValidPin } from '@/lib/users';
 import { t } from '@/lib/i18n/uz';
 
 type Role = User['role'];
 const ROLES: Role[] = ['operator', 'technician', 'admin'];
-const validPin = (p: string) => /^\d{4}$/.test(p);
 
 function RolePicker({ value, onPick }: { value: Role; onPick: (r: Role) => void }) {
   return (
@@ -58,9 +58,6 @@ export default function UsersAdminScreen() {
     );
   }
 
-  const activeAdmins = users.filter((u) => u.role === 'admin' && u.active);
-  const isLastAdmin = (u: User) => u.role === 'admin' && u.active && activeAdmins.length <= 1;
-
   const apply = async (id: string, patch: Partial<User>) => {
     setMessage('');
     try {
@@ -74,7 +71,7 @@ export default function UsersAdminScreen() {
 
   const addUser = async () => {
     if (!name.trim()) return setMessage(t.users.nameRequired);
-    if (pin !== '' && !validPin(pin)) return setMessage(t.users.pinInvalid);
+    if (pin !== '' && !isValidPin(pin)) return setMessage(t.users.pinInvalid);
     setMessage('');
     try {
       await db.users.insert({
@@ -95,18 +92,18 @@ export default function UsersAdminScreen() {
 
   const changeRole = (u: User, r: Role) => {
     if (r === u.role) return;
-    if (isLastAdmin(u)) return setMessage(t.users.lastAdmin);
+    if (!canDemoteOrDeactivate(users, u)) return setMessage(t.users.lastAdmin);
     void apply(u.id, { role: r });
   };
 
   const toggleActive = (u: User) => {
-    if (u.active && isLastAdmin(u)) return setMessage(t.users.lastAdmin);
+    if (u.active && !canDemoteOrDeactivate(users, u)) return setMessage(t.users.lastAdmin);
     void apply(u.id, { active: !u.active });
   };
 
   const setUserPin = (u: User) => {
     const p = pinEdits[u.id] ?? '';
-    if (!validPin(p)) return setMessage(t.users.pinInvalid);
+    if (!isValidPin(p)) return setMessage(t.users.pinInvalid);
     setPinEdits({ ...pinEdits, [u.id]: '' });
     void apply(u.id, { pinHash: hashPin(p) });
   };
