@@ -43,3 +43,9 @@ describe('media.fitSize', () => {
     expect(fitSize(800, 600)).toEqual({ width: 800, height: 600 });
   });
 });
+
+describe('yaxlitlash', () => {
+  it('1 xona', () => {
+    expect(remainingText({ state: 'soon', remainingHours: 12.3333 })).toBe('12.3 soat qoldi');
+  });
+});

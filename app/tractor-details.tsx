@@ -22,6 +22,7 @@ export default function TractorDetailsScreen() {
   const [readings, setReadings] = useState<MotoReading[]>([]);
   const [services, setServices] = useState<ServiceRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -31,11 +32,15 @@ export default function TractorDetailsScreen() {
           const v = await getTractorView(String(id), todayLocal());
           const [rs, ss] = await Promise.all([db.motoReadings.list(), db.serviceRecords.list()]);
           if (!alive) return;
+          setFailed(false);
           setView(v);
           setReadings(rs.filter((r) => r.tractorId === v.tractor.id).sort(newest).slice(0, 5));
           setServices(ss.filter((s) => s.tractorId === v.tractor.id).sort(newest).slice(0, 5));
-        } catch {
-          if (alive) setView(null);
+        } catch (e) {
+          if (alive) {
+            setView(null);
+            setFailed(!/topilmadi/i.test((e as Error).message));
+          }
         } finally {
           if (alive) setLoading(false);
         }
@@ -64,7 +69,7 @@ export default function TractorDetailsScreen() {
         </View>
       ) : !view ? (
         <View style={styles.center}>
-          <Text style={styles.muted}>{t.tractor.notFound}</Text>
+          <Text style={styles.muted}>{failed ? t.errors.generic : t.tractor.notFound}</Text>
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.content}>
@@ -104,7 +109,7 @@ export default function TractorDetailsScreen() {
           {readings.length === 0 ? <Text style={styles.muted}>{t.tractor.noRecords}</Text> : null}
           {readings.map((r) => (
             <Text key={r.id} style={styles.rowTitle}>
-              {r.date} · {fmt(r.reading)} m/s · +{fmt(r.physHours)} ({fmt(r.equivHours)} kelt.)
+              {r.date} · {fmt(r.reading)} {t.card.hoursUnit} · +{fmt(r.physHours)} ({fmt(r.equivHours)} {t.card.equivShort})
             </Text>
           ))}
 
@@ -112,7 +117,7 @@ export default function TractorDetailsScreen() {
           {services.length === 0 ? <Text style={styles.muted}>{t.tractor.noRecords}</Text> : null}
           {services.map((s) => (
             <Text key={s.id} style={styles.rowTitle}>
-              {s.date} · {s.levelCode} · {fmt(s.reading)} m/s
+              {s.date} · {s.levelCode} · {fmt(s.reading)} {t.card.hoursUnit}
             </Text>
           ))}
         </ScrollView>

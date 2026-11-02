@@ -1,3 +1,4 @@
+import { t } from './i18n/uz';
 import type { LevelStatus } from './core/regulation';
 import type { TractorView } from './services/tractors';
 
@@ -5,10 +6,10 @@ export type DashboardFilter = 'all' | 'ok' | 'soon' | 'overdue';
 
 /** Daraja qoldig'i matni: "{N} soat resurs bor" / "{N} soat qoldi" / "muddati {N} soatga o'tdi". */
 export function remainingText(st: Pick<LevelStatus, 'state' | 'remainingHours'>): string {
-  const n = Math.abs(st.remainingHours);
-  if (st.state === 'overdue') return `muddati ${n} soatga o'tdi`;
-  if (st.state === 'soon') return `${n} soat qoldi`;
-  return `${n} soat resurs bor`;
+  const n = Math.round(Math.abs(st.remainingHours) * 10) / 10;
+  if (st.state === 'overdue') return t.card.overdue(n);
+  if (st.state === 'soon') return t.card.soon(n);
+  return t.card.ok(n);
 }
 
 export function cardStatusLine(next: LevelStatus | null): string | null {
@@ -16,7 +17,7 @@ export function cardStatusLine(next: LevelStatus | null): string | null {
 }
 
 export function forecastLine(forecast: { days: number; date: string } | null): string | null {
-  return forecast ? `Taxminan ${forecast.days} kun (${forecast.date})` : null;
+  return forecast ? t.card.forecast(forecast.days, forecast.date) : null;
 }
 
 export function viewState(v: TractorView): 'ok' | 'soon' | 'overdue' {

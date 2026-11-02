@@ -57,7 +57,7 @@ export function DashboardHeader({
             activeOpacity={0.7}
           >
             <Clock size={16} color="#ffffff" />
-            <Text style={styles.buttonText}>Moto-soat</Text>
+            <Text style={styles.buttonText}>{t.dashboard.hours}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -66,7 +66,7 @@ export function DashboardHeader({
             activeOpacity={0.7}
           >
             <Wrench size={16} color="#ffffff" />
-            <Text style={styles.buttonText}>TXK</Text>
+            <Text style={styles.buttonText}>{t.dashboard.txk}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -84,7 +84,7 @@ export function DashboardHeader({
             activeOpacity={0.7}
           >
             <User size={16} color="#ffffff" />
-            <Text style={styles.buttonText}>Profil</Text>
+            <Text style={styles.buttonText}>{t.dashboard.profile}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -93,7 +93,7 @@ export function DashboardHeader({
             activeOpacity={0.7}
           >
             <BarChart3 size={16} color="#ffffff" />
-            <Text style={styles.buttonText}>Hisobot</Text>
+            <Text style={styles.buttonText}>{t.dashboard.reports}</Text>
           </TouchableOpacity>
         </View>
       </View>

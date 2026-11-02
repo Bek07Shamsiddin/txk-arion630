@@ -8,7 +8,6 @@ import {
   TextInput,
   ScrollView,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
@@ -19,6 +18,7 @@ import { parseDecimal } from '@/lib/core/numbers';
 import { isIsoDate, todayLocal } from '@/lib/core/dates';
 import { registerTractor } from '@/lib/services/tractors';
 import { saveImage } from '@/lib/media';
+import { showMessage } from '@/lib/notify';
 import { t } from '@/lib/i18n/uz';
 
 export default function AddTractorScreen() {
@@ -64,7 +64,7 @@ export default function AddTractorScreen() {
         : await ImagePicker.launchImageLibraryAsync(opts);
       if (!res.canceled && res.assets[0]) setPhotoUri(await saveImage(res.assets[0].uri));
     } catch (e) {
-      Alert.alert(t.common.error, (e as Error).message);
+      showMessage(t.common.error, (e as Error).message);
     }
   };
 
@@ -97,7 +97,7 @@ export default function AddTractorScreen() {
       });
       router.back();
     } catch (e) {
-      Alert.alert(t.common.error, (e as Error).message || t.errors.storage);
+      showMessage(t.common.error, (e as Error).message || t.errors.storage);
     } finally {
       setLoading(false);
     }

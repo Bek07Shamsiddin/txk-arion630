@@ -7,6 +7,7 @@ import { todayLocal } from '@/lib/core/dates';
 import { refreshAlerts } from '@/lib/services/alerts';
 import { listTractorViews, type TractorView } from '@/lib/services/tractors';
 import { filterViews } from '@/lib/tractorCard';
+import { showMessage } from '@/lib/notify';
 import { t } from '@/lib/i18n/uz';
 import { DashboardHeader } from '@/components/DashboardHeader';
 import { FilterTabs, FilterType } from '@/components/FilterTabs';
@@ -33,6 +34,7 @@ export default function DashboardScreen() {
     } catch (e) {
       console.error('Dashboard load failed', e);
       setFailed(true);
+      showMessage(t.common.error, t.errors.generic);
     } finally {
       setLoading(false);
       setRefreshing(false);
