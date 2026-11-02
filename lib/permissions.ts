@@ -1,4 +1,4 @@
-import type { UserRole } from './auth';
+export type UserRole = 'operator' | 'technician' | 'admin';
 import { t } from './i18n/uz';
 
 /** User (active) ham, eski UserProfile (is_active) ham qabul qilinadi. */

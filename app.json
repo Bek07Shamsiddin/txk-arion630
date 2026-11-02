@@ -1,13 +1,16 @@
 {
   "expo": {
-    "name": "bolt-expo-nativewind",
-    "slug": "bolt-expo-nativewind",
+    "name": "TXK Arion-630",
+    "slug": "txk-arion630",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "android": {
+      "package": "uz.txk.arion630"
+    },
     "ios": {
       "supportsTablet": true
     },

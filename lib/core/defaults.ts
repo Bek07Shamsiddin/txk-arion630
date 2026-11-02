@@ -34,7 +34,7 @@ export const DEFAULT_OPERATION_TYPES: OperationType[] = [
 const LEAD_DAYS = 7;
 const part = (name: string) => ({ name, quantity: 1, leadDays: LEAD_DAYS });
 
-// Qismlar nomi supabase/migrations/20251204110733 dagi service_intervals.parts_needed dan.
+// Qismlar nomi eski reglament jadvalidagi parts_needed dan.
 export const DEFAULT_REGULATION: RegulationLevel[] = [
   {
     code: 'O50',

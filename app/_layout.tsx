@@ -81,6 +81,7 @@ function RootLayoutNav({ onReload }: { onReload: () => void }) {
         <Stack.Screen name="simulator" />
         <Stack.Screen name="regulation-admin" />
         <Stack.Screen name="backup" />
+        <Stack.Screen name="navigator" />
         <Stack.Screen name="tractor-details" />
         <Stack.Screen name="+not-found" />
       </Stack>

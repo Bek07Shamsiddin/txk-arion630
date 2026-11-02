@@ -1,4 +1,5 @@
 import { Tabs } from 'expo-router';
+import { t } from '@/lib/i18n/uz';
 
 export default function TabLayout() {
   return (
@@ -11,7 +12,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Dashboard',
+          title: t.menu.title,
         }}
       />
     </Tabs>
