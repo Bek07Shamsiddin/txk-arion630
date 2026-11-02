@@ -2,6 +2,7 @@ import { useState } from 'react';
 import {
   View,
   Text,
+  Image,
   StyleSheet,
   TouchableOpacity,
   TextInput,
@@ -10,126 +11,110 @@ import {
   Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, Calendar } from 'lucide-react-native';
-import { supabase } from '@/lib/supabase';
-import { MediaUploader } from '@/components/MediaUploader';
-import { MediaItem, uploadMultipleMedia } from '@/lib/mediaUpload';
+import { ArrowLeft } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { useSession } from '@/lib/session';
+import { Permissions } from '@/lib/permissions';
+import { parseDecimal } from '@/lib/core/numbers';
+import { isIsoDate, todayLocal } from '@/lib/core/dates';
+import { registerTractor } from '@/lib/services/tractors';
+import { saveImage } from '@/lib/media';
+import { t } from '@/lib/i18n/uz';
 
 export default function AddTractorScreen() {
   const router = useRouter();
+  const { user } = useSession();
   const [loading, setLoading] = useState(false);
-
-  const [formData, setFormData] = useState({
-    model: '',
+  const [form, setForm] = useState({
+    model: t.tractor.defaultModel,
     serialNumber: '',
-    registrationDate: '',
-    initialMotoHours: '',
     location: '',
+    operatorName: '',
+    registrationDate: todayLocal(),
+    initialReading: '0',
   });
-
-  const [media, setMedia] = useState<MediaItem[]>([]);
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {};
-
-    if (!formData.model.trim()) {
-      newErrors.model = 'Model is required';
-    }
-
-    if (!formData.serialNumber.trim()) {
-      newErrors.serialNumber = 'Serial number is required';
-    }
-
-    if (!formData.registrationDate.trim()) {
-      newErrors.registrationDate = 'Registration date is required';
-    } else {
-      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-      if (!dateRegex.test(formData.registrationDate)) {
-        newErrors.registrationDate = 'Date must be in YYYY-MM-DD format';
-      }
-    }
-
-    if (!formData.initialMotoHours.trim()) {
-      newErrors.initialMotoHours = 'Initial moto-hours is required';
-    } else if (isNaN(Number(formData.initialMotoHours)) || Number(formData.initialMotoHours) < 0) {
-      newErrors.initialMotoHours = 'Must be a valid number';
-    }
-
-    if (!formData.location.trim()) {
-      newErrors.location = 'Location is required';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  const set = (key: keyof typeof form) => (text: string) => {
+    setForm((f) => ({ ...f, [key]: text }));
+    if (errors[key]) setErrors((e) => ({ ...e, [key]: '' }));
   };
 
-  const calculateNextServiceHours = (currentHours: number): number => {
-    const intervals = [50, 100, 250, 500, 1000];
+  if (!Permissions.canAddTractor(user)) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <ArrowLeft size={24} color="#ffffff" />
+          </TouchableOpacity>
+          <Text style={styles.title}>{t.tractor.addTitle}</Text>
+          <View style={styles.placeholder} />
+        </View>
+        <Text style={styles.forbidden}>{t.tractor.forbidden}</Text>
+      </View>
+    );
+  }
 
-    for (const interval of intervals) {
-      if (currentHours < interval) {
-        return interval;
-      }
+  const pick = async (camera: boolean) => {
+    try {
+      const opts: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], quality: 1 };
+      const res = camera
+        ? await ImagePicker.launchCameraAsync(opts)
+        : await ImagePicker.launchImageLibraryAsync(opts);
+      if (!res.canceled && res.assets[0]) setPhotoUri(await saveImage(res.assets[0].uri));
+    } catch (e) {
+      Alert.alert(t.common.error, (e as Error).message);
     }
+  };
 
-    const multiplier = Math.floor(currentHours / 1000) + 1;
-    return multiplier * 1000;
+  const validate = (): { initialReading: number } | null => {
+    const e: Record<string, string> = {};
+    if (!form.model.trim()) e.model = t.tractor.required;
+    if (!form.serialNumber.trim()) e.serialNumber = t.tractor.required;
+    if (!form.location.trim()) e.location = t.tractor.required;
+    if (!form.operatorName.trim()) e.operatorName = t.tractor.required;
+    if (!isIsoDate(form.registrationDate.trim())) e.registrationDate = t.tractor.badDate;
+    const reading = parseDecimal(form.initialReading);
+    if (reading === null || reading < 0) e.initialReading = t.tractor.badNumber;
+    setErrors(e);
+    return Object.keys(e).length === 0 && reading !== null ? { initialReading: reading } : null;
   };
 
   const handleSubmit = async () => {
-    if (!validateForm()) {
-      return;
-    }
-
+    const ok = validate();
+    if (!ok) return;
     setLoading(true);
-
     try {
-      const mediaUrls = await uploadMultipleMedia(media, 'tractors');
-      const photoUrl = mediaUrls.length > 0 ? mediaUrls[0] : null;
-
-      const initialHours = Number(formData.initialMotoHours);
-      const nextServiceHours = calculateNextServiceHours(initialHours);
-
-      const { data, error } = await supabase
-        .from('tractors')
-        .insert([
-          {
-            model: formData.model.trim(),
-            serial_number: formData.serialNumber.trim(),
-            registration_date: formData.registrationDate.trim(),
-            current_moto_hours: initialHours,
-            next_service_hours: nextServiceHours,
-            location: formData.location.trim(),
-            photo_url: photoUrl,
-            media_urls: mediaUrls,
-            status: 'active',
-          },
-        ])
-        .select()
-        .single();
-
-      if (error) {
-        throw error;
-      }
-
-      Alert.alert(
-        'Success',
-        `Tractor registered successfully!\nNext service at: ${nextServiceHours} hours`,
-        [
-          {
-            text: 'OK',
-            onPress: () => router.back(),
-          },
-        ]
-      );
-    } catch (error: any) {
-      console.error('Error saving tractor:', error);
-      Alert.alert('Error', error.message || 'Failed to register tractor');
+      await registerTractor({
+        model: form.model.trim(),
+        serialNumber: form.serialNumber.trim(),
+        registrationDate: form.registrationDate.trim(),
+        location: form.location.trim(),
+        operatorName: form.operatorName.trim(),
+        photoUri,
+        initialReading: ok.initialReading,
+      });
+      router.back();
+    } catch (e) {
+      Alert.alert(t.common.error, (e as Error).message || t.errors.storage);
     } finally {
       setLoading(false);
     }
   };
+
+  const field = (key: keyof typeof form, label: string, extra?: object) => (
+    <View style={styles.formGroup}>
+      <Text style={styles.label}>{label}</Text>
+      <TextInput
+        style={[styles.input, errors[key] ? styles.inputError : null]}
+        value={form[key]}
+        onChangeText={set(key)}
+        {...extra}
+      />
+      {errors[key] ? <Text style={styles.errorText}>{errors[key]}</Text> : null}
+    </View>
+  );
 
   return (
     <View style={styles.container}>
@@ -137,108 +122,36 @@ export default function AddTractorScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <ArrowLeft size={24} color="#ffffff" />
         </TouchableOpacity>
-        <Text style={styles.title}>Add Tractor</Text>
+        <Text style={styles.title}>{t.tractor.addTitle}</Text>
         <View style={styles.placeholder} />
       </View>
 
       <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
         <View style={styles.form}>
-          <MediaUploader
-            media={media}
-            onMediaChange={setMedia}
-            maxItems={5}
-            allowVideo={true}
-            label="Tractor Condition (Photos & Videos)"
-            description="Document the current condition of the tractor with photos and videos"
-            folder="tractors"
-          />
-
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Model *</Text>
-            <TextInput
-              style={[styles.input, errors.model && styles.inputError]}
-              placeholder="e.g., John Deere 7230R"
-              value={formData.model}
-              onChangeText={(text) => {
-                setFormData({ ...formData, model: text });
-                if (errors.model) setErrors({ ...errors, model: '' });
-              }}
-            />
-            {errors.model && <Text style={styles.errorText}>{errors.model}</Text>}
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Serial Number *</Text>
-            <TextInput
-              style={[styles.input, errors.serialNumber && styles.inputError]}
-              placeholder="e.g., 1RW7230RHEB123456"
-              value={formData.serialNumber}
-              onChangeText={(text) => {
-                setFormData({ ...formData, serialNumber: text });
-                if (errors.serialNumber) setErrors({ ...errors, serialNumber: '' });
-              }}
-            />
-            {errors.serialNumber && (
-              <Text style={styles.errorText}>{errors.serialNumber}</Text>
-            )}
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Registration Date *</Text>
-            <View style={styles.dateInputContainer}>
-              <TextInput
-                style={[styles.input, styles.dateInput, errors.registrationDate && styles.inputError]}
-                placeholder="YYYY-MM-DD (e.g., 2024-01-15)"
-                value={formData.registrationDate}
-                onChangeText={(text) => {
-                  setFormData({ ...formData, registrationDate: text });
-                  if (errors.registrationDate) setErrors({ ...errors, registrationDate: '' });
-                }}
-              />
-              <Calendar size={20} color="#6b7280" style={styles.calendarIcon} />
+            <Text style={styles.label}>{t.tractor.photo}</Text>
+            {photoUri ? <Image source={{ uri: photoUri }} style={styles.photoPreview} /> : null}
+            <View style={styles.photoButtons}>
+              <TouchableOpacity style={styles.photoButton} onPress={() => pick(false)}>
+                <Text style={styles.photoButtonText}>{t.tractor.pickPhoto}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.photoButton} onPress={() => pick(true)}>
+                <Text style={styles.photoButtonText}>{t.tractor.takePhoto}</Text>
+              </TouchableOpacity>
+              {photoUri ? (
+                <TouchableOpacity style={styles.photoButton} onPress={() => setPhotoUri(null)}>
+                  <Text style={styles.photoButtonText}>{t.tractor.removePhoto}</Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
-            {errors.registrationDate && (
-              <Text style={styles.errorText}>{errors.registrationDate}</Text>
-            )}
           </View>
 
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Initial Moto-Hours *</Text>
-            <TextInput
-              style={[styles.input, errors.initialMotoHours && styles.inputError]}
-              placeholder="e.g., 0"
-              value={formData.initialMotoHours}
-              onChangeText={(text) => {
-                setFormData({ ...formData, initialMotoHours: text });
-                if (errors.initialMotoHours) setErrors({ ...errors, initialMotoHours: '' });
-              }}
-              keyboardType="numeric"
-            />
-            {errors.initialMotoHours && (
-              <Text style={styles.errorText}>{errors.initialMotoHours}</Text>
-            )}
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Location *</Text>
-            <TextInput
-              style={[styles.input, errors.location && styles.inputError]}
-              placeholder="e.g., Field A, Sector 3"
-              value={formData.location}
-              onChangeText={(text) => {
-                setFormData({ ...formData, location: text });
-                if (errors.location) setErrors({ ...errors, location: '' });
-              }}
-            />
-            {errors.location && <Text style={styles.errorText}>{errors.location}</Text>}
-          </View>
-
-          <View style={styles.infoBox}>
-            <Text style={styles.infoText}>
-              The next service interval will be automatically calculated based on standard
-              intervals: 50, 100, 250, 500, 1000 hours
-            </Text>
-          </View>
+          {field('model', t.tractor.model)}
+          {field('serialNumber', t.tractor.serial)}
+          {field('location', t.tractor.location)}
+          {field('operatorName', t.tractor.operator)}
+          {field('registrationDate', t.tractor.regDate)}
+          {field('initialReading', t.tractor.initialReading, { keyboardType: 'decimal-pad' })}
         </View>
 
         <TouchableOpacity
@@ -247,11 +160,7 @@ export default function AddTractorScreen() {
           disabled={loading}
           activeOpacity={0.8}
         >
-          {loading ? (
-            <ActivityIndicator size="small" color="#ffffff" />
-          ) : (
-            <Text style={styles.submitButtonText}>Register Tractor</Text>
-          )}
+          {loading ? <ActivityIndicator size="small" color="#ffffff" /> : <Text style={styles.submitButtonText}>{t.tractor.register}</Text>}
         </TouchableOpacity>
       </ScrollView>
     </View>
@@ -298,6 +207,7 @@ const styles = StyleSheet.create({
   photoPreview: {
     width: '100%',
     height: 200,
+    marginBottom: 8,
     borderRadius: 12,
     backgroundColor: '#e5e7eb',
   },
@@ -319,9 +229,10 @@ const styles = StyleSheet.create({
   },
   photoButtons: {
     flexDirection: 'row',
-    marginTop: 12,
-    gap: 12,
+    flexWrap: 'wrap',
+    gap: 8,
   },
+  forbidden: { padding: 24, fontSize: 16, color: '#6b7280', textAlign: 'center' },
   photoButton: {
     flex: 1,
     backgroundColor: '#374151',

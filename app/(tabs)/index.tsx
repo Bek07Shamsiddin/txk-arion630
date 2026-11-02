@@ -1,237 +1,70 @@
-import { useState, useEffect, useCallback } from 'react';
-import {
-  View,
-  StyleSheet,
-  FlatList,
-  ActivityIndicator,
-  Text,
-  RefreshControl,
-} from 'react-native';
+import { useState, useCallback } from 'react';
+import { View, StyleSheet, FlatList, ActivityIndicator, Text, RefreshControl } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import { supabase } from '@/lib/supabase';
-import { Tractor } from '@/lib/types';
-import { getTractorServiceStatus } from '@/lib/tractorStatus';
-import { getAllTractorsLiveData, TractorLiveData } from '@/lib/liveMonitoring';
+import { db } from '@/lib/db';
+import { todayLocal } from '@/lib/core/dates';
+import { refreshAlerts } from '@/lib/services/alerts';
+import { listTractorViews, type TractorView } from '@/lib/services/tractors';
+import { filterViews } from '@/lib/tractorCard';
+import { t } from '@/lib/i18n/uz';
 import { DashboardHeader } from '@/components/DashboardHeader';
 import { FilterTabs, FilterType } from '@/components/FilterTabs';
 import { TractorCard } from '@/components/TractorCard';
 
-interface TractorWithLastService extends Tractor {
-  lastServiceDate?: string;
-}
-
 export default function DashboardScreen() {
   const router = useRouter();
-  const [tractors, setTractors] = useState<TractorWithLastService[]>([]);
+  const [views, setViews] = useState<TractorView[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<FilterType>('all');
-  const [unreadNotifications, setUnreadNotifications] = useState(0);
-  const [liveData, setLiveData] = useState<Map<string, TractorLiveData>>(new Map());
+  const [unread, setUnread] = useState(0);
+  const [failed, setFailed] = useState(false);
 
-  const loadTractors = useCallback(async () => {
+  const load = useCallback(async () => {
     try {
-      const { data: tractorData, error: tractorError } = await supabase
-        .from('tractors')
-        .select('*')
-        .order('updated_at', { ascending: false });
-
-      if (tractorError) throw tractorError;
-
-      if (tractorData) {
-        const tractorsWithLastService = await Promise.all(
-          tractorData.map(async (tractor) => {
-            const { data: serviceData } = await supabase
-              .from('service_logs')
-              .select('date')
-              .eq('tractor_id', tractor.id)
-              .order('date', { ascending: false })
-              .limit(1)
-              .maybeSingle();
-
-            return {
-              ...tractor,
-              lastServiceDate: serviceData?.date,
-            };
-          })
-        );
-
-        setTractors(tractorsWithLastService);
-      }
-    } catch (error) {
-      console.error('Error loading tractors:', error);
+      const today = todayLocal();
+      const tractors = await db.tractors.list();
+      // N2: kalendar bo'yicha muddati o'tganlar ham eslatma sifatida chiqishi uchun.
+      for (const tr of tractors) await refreshAlerts(tr.id, today);
+      setViews(await listTractorViews(today));
+      setUnread((await db.notifications.list()).filter((n) => !n.isRead).length);
+      setFailed(false);
+    } catch (e) {
+      console.error('Dashboard load failed', e);
+      setFailed(true);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   }, []);
 
-  const loadUnreadCount = useCallback(async () => {
-    try {
-      const { count, error } = await supabase
-        .from('service_notifications')
-        .select('*', { count: 'exact', head: true })
-        .eq('is_read', false);
-
-      if (error) throw error;
-      setUnreadNotifications(count || 0);
-    } catch (error) {
-      console.error('Error loading notification count:', error);
-    }
-  }, []);
-
-  const loadLiveData = useCallback(async () => {
-    try {
-      const data = await getAllTractorsLiveData();
-      setLiveData(data);
-    } catch (error) {
-      console.error('Error loading live data:', error);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadTractors();
-    loadUnreadCount();
-    loadLiveData();
-
-    const tractorSubscription = supabase
-      .channel('tractors-updates')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'tractors' },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            setTractors((prev) => [payload.new as TractorWithLastService, ...prev]);
-          } else if (payload.eventType === 'UPDATE') {
-            setTractors((prev) =>
-              prev.map((t) =>
-                t.id === payload.new.id ? { ...t, ...payload.new } : t
-              )
-            );
-          } else if (payload.eventType === 'DELETE') {
-            setTractors((prev) => prev.filter((t) => t.id !== payload.old.id));
-          }
-          loadLiveData();
-        }
-      )
-      .subscribe();
-
-    const notificationSubscription = supabase
-      .channel('notifications-updates')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'service_notifications' },
-        () => {
-          loadUnreadCount();
-        }
-      )
-      .subscribe();
-
-    const partsSubscription = supabase
-      .channel('parts-updates')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'parts_requests' },
-        () => {
-          loadLiveData();
-        }
-      )
-      .subscribe();
-
-    const callsSubscription = supabase
-      .channel('calls-updates')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'technician_calls' },
-        () => {
-          loadLiveData();
-        }
-      )
-      .subscribe();
-
-    const liveDataInterval = setInterval(() => {
-      loadLiveData();
-    }, 10000);
-
-    return () => {
-      tractorSubscription.unsubscribe();
-      notificationSubscription.unsubscribe();
-      partsSubscription.unsubscribe();
-      callsSubscription.unsubscribe();
-      clearInterval(liveDataInterval);
-    };
-  }, [loadTractors, loadUnreadCount, loadLiveData]);
-
   useFocusEffect(
     useCallback(() => {
-      loadTractors();
-      loadUnreadCount();
-      loadLiveData();
-    }, [loadTractors, loadUnreadCount, loadLiveData])
+      load();
+    }, [load]),
   );
 
-  const filteredTractors = tractors.filter((tractor) => {
-    if (filter === 'service-required') {
-      const status = getTractorServiceStatus(tractor);
-      return status.color === 'red' || status.color === 'yellow';
-    }
-    return true;
-  });
+  const shown = filterViews(views, filter);
+  const go = (path: string) => router.push(path as never);
 
-  const handleRefresh = () => {
-    setRefreshing(true);
-    loadTractors();
-  };
-
-  const handleAddTractor = () => {
-    router.push('/add-tractor');
-  };
-
-  const handleLogHours = () => {
-    router.push('/add-moto-hours');
-  };
-
-  const handleServiceHistory = () => {
-    router.push('/service-history');
-  };
-
-  const handleNotifications = () => {
-    router.push('/notifications');
-  };
-
-  const handleProfile = () => {
-    router.push('/profile');
-  };
-
-  const handleReports = () => {
-    router.push('/reports');
-  };
-
-  const handleNavigator = () => {
-    router.push('/navigator');
-  };
-
-  const handleTractorPress = (tractorId: string) => {
-    router.push({
-      pathname: '/tractor-details',
-      params: { id: tractorId },
-    });
-  };
+  const header = (
+    <DashboardHeader
+      onAddTractor={() => go('/add-tractor')}
+      onLogHours={() => go('/add-moto-hours')}
+      onServiceHistory={() => go('/service-history')}
+      onNotifications={() => go('/notifications')}
+      onProfile={() => go('/profile')}
+      onReports={() => go('/reports')}
+      onNavigator={() => go('/navigator')}
+      unreadCount={unread}
+    />
+  );
 
   if (loading) {
     return (
       <View style={styles.container}>
-        <DashboardHeader
-          onAddTractor={handleAddTractor}
-          onLogHours={handleLogHours}
-          onServiceHistory={handleServiceHistory}
-          onNotifications={handleNotifications}
-          onProfile={handleProfile}
-          onReports={handleReports}
-          onNavigator={handleNavigator}
-          unreadCount={unreadNotifications}
-        />
+        {header}
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color="#1f2937" />
         </View>
@@ -241,44 +74,34 @@ export default function DashboardScreen() {
 
   return (
     <View style={styles.container}>
-      <DashboardHeader
-        onAddTractor={handleAddTractor}
-        onLogHours={handleLogHours}
-        onServiceHistory={handleServiceHistory}
-        onNotifications={handleNotifications}
-        onProfile={handleProfile}
-        onReports={handleReports}
-        onNavigator={handleNavigator}
-        unreadCount={unreadNotifications}
-      />
-
+      {header}
       <FilterTabs activeFilter={filter} onFilterChange={setFilter} />
-
-      {filteredTractors.length === 0 ? (
+      {shown.length === 0 ? (
         <View style={styles.centerContainer}>
           <Text style={styles.emptyText}>
-            {filter === 'service-required'
-              ? 'No tractors requiring service'
-              : 'No tractors found'}
+            {failed ? t.errors.generic : filter === 'all' ? t.dashboard.empty : t.dashboard.emptyFilter}
           </Text>
         </View>
       ) : (
         <FlatList
-          data={filteredTractors}
-          keyExtractor={(item) => item.id}
+          data={shown}
+          keyExtractor={(v) => v.tractor.id}
           renderItem={({ item }) => (
             <TractorCard
-              tractor={item}
-              lastServiceDate={item.lastServiceDate}
-              liveData={liveData.get(item.id)}
-              onPress={() => handleTractorPress(item.id)}
+              view={item}
+              onPress={() => router.push({ pathname: '/tractor-details', params: { id: item.tractor.id } })}
             />
           )}
           contentContainerStyle={styles.listContent}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => {
+                setRefreshing(true);
+                load();
+              }}
+            />
           }
-          scrollEnabled={true}
         />
       )}
     </View>
@@ -286,23 +109,8 @@ export default function DashboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  listContent: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 24,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#6b7280',
-    textAlign: 'center',
-  },
+  container: { flex: 1, backgroundColor: '#ffffff' },
+  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  listContent: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 24 },
+  emptyText: { fontSize: 16, color: '#6b7280', textAlign: 'center' },
 });

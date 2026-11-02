@@ -1,19 +1,20 @@
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
-import { Package, Wrench } from 'lucide-react-native';
-import { Tractor } from '@/lib/types';
-import { getTractorServiceStatus, getStatusColor } from '@/lib/tractorStatus';
-import { TractorLiveData } from '@/lib/liveMonitoring';
+import { t } from '@/lib/i18n/uz';
+import type { TractorView } from '@/lib/services/tractors';
+import { cardStatusLine, forecastLine, STATUS_COLORS } from '@/lib/tractorCard';
 
 interface TractorCardProps {
-  tractor: Tractor;
-  lastServiceDate?: string;
-  liveData?: TractorLiveData;
+  view: TractorView;
   onPress: () => void;
 }
 
-export function TractorCard({ tractor, lastServiceDate, liveData, onPress }: TractorCardProps) {
-  const status = getTractorServiceStatus(tractor);
-  const statusColor = getStatusColor(status.color);
+const fmt = (n: number) => String(Math.round(n * 10) / 10);
+
+export function TractorCard({ view, onPress }: TractorCardProps) {
+  const { tractor } = view;
+  const statusColor = STATUS_COLORS[view.color];
+  const statusLine = cardStatusLine(view.next);
+  const forecast = forecastLine(view.forecast);
 
   return (
     <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.8}>
@@ -23,75 +24,32 @@ export function TractorCard({ tractor, lastServiceDate, liveData, onPress }: Tra
         <View style={styles.header}>
           <View style={styles.info}>
             <Text style={styles.model}>{tractor.model}</Text>
-            <Text style={styles.serial}>{tractor.serial_number}</Text>
+            <Text style={styles.serial}>{tractor.serialNumber}</Text>
           </View>
-          <View style={styles.headerRight}>
-            {tractor.photo_url && (
-              <Image
-                source={{ uri: tractor.photo_url }}
-                style={styles.photo}
-              />
-            )}
-            {liveData && (liveData.pendingPartsCount > 0 || liveData.activeCallsCount > 0) && (
-              <View style={styles.alertBadges}>
-                {liveData.pendingPartsCount > 0 && (
-                  <View style={styles.alertBadge}>
-                    <Package size={12} color="#f59e0b" />
-                    <Text style={styles.alertBadgeText}>{liveData.pendingPartsCount}</Text>
-                  </View>
-                )}
-                {liveData.activeCallsCount > 0 && (
-                  <View style={styles.alertBadge}>
-                    <Wrench size={12} color="#3b82f6" />
-                    <Text style={styles.alertBadgeText}>{liveData.activeCallsCount}</Text>
-                  </View>
-                )}
-              </View>
-            )}
-          </View>
+          {tractor.photoUri ? <Image source={{ uri: tractor.photoUri }} style={styles.photo} /> : null}
         </View>
 
         <View style={styles.statusSection}>
-          <View style={styles.statusRow}>
-            <Text style={[styles.statusLabel, { color: statusColor }]}>
-              {status.label}
-            </Text>
-            <View style={styles.liveIndicator}>
-              <View style={styles.liveDot} />
-              <Text style={styles.liveText}>LIVE</Text>
-            </View>
-          </View>
-          <Text style={styles.statusSubtext}>
-            {liveData
-              ? liveData.isOverdue
-                ? `Overdue by ${tractor.current_moto_hours - tractor.next_service_hours}h`
-                : `${liveData.hoursUntilService}h until service`
-              : status.hoursUntilService > 0
-              ? `${status.hoursUntilService}h until next service`
-              : 'Service overdue'}
+          <Text style={[styles.statusLabel, { color: statusColor }]}>
+            {statusLine ?? t.dashboard.noLevels}
           </Text>
+          {forecast ? <Text style={styles.statusSubtext}>{forecast}</Text> : null}
         </View>
 
         <View style={styles.metricsContainer}>
           <View style={styles.metricBox}>
-            <Text style={styles.metricLabel}>Current Hours</Text>
-            <Text style={styles.metricValue}>{tractor.current_moto_hours.toLocaleString()}</Text>
+            <Text style={styles.metricLabel}>{t.dashboard.currentReading}</Text>
+            <Text style={styles.metricValue}>{fmt(view.currentReading)}</Text>
           </View>
-
           <View style={styles.metricBox}>
-            <Text style={styles.metricLabel}>Next Service</Text>
-            <Text style={styles.metricValue}>{tractor.next_service_hours.toLocaleString()}</Text>
-          </View>
-
-          <View style={styles.metricBox}>
-            <Text style={styles.metricLabel}>Last Service</Text>
-            <Text style={styles.metricValue}>
-              {lastServiceDate ? new Date(lastServiceDate).toLocaleDateString() : 'N/A'}
-            </Text>
+            <Text style={styles.metricLabel}>{t.dashboard.equivHours}</Text>
+            <Text style={styles.metricValue}>{fmt(view.totalEquivHours)}</Text>
           </View>
         </View>
 
-        <Text style={styles.location}>{tractor.location}</Text>
+        <Text style={styles.location}>
+          {tractor.location} · {t.dashboard.operator}: {tractor.operatorName}
+        </Text>
       </View>
     </TouchableOpacity>
   );
@@ -142,10 +100,6 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 8,
-  },
-  alertBadges: {
-    flexDirection: 'row',
-    gap: 4,
   },
   alertBadge: {
     flexDirection: 'row',

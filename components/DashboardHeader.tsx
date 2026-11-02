@@ -1,5 +1,6 @@
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
-import { Plus, User, BarChart3, Clock, Bell, Wrench, Navigation } from 'lucide-react-native';
+import { Plus, User, BarChart3, Clock, Bell, Wrench, Menu } from 'lucide-react-native';
+import { t } from '@/lib/i18n/uz';
 
 interface DashboardHeaderProps {
   onAddTractor: () => void;
@@ -25,7 +26,7 @@ export function DashboardHeader({
   return (
     <View style={styles.container}>
       <View style={styles.topRow}>
-        <Text style={styles.title}>Tractors</Text>
+        <Text style={styles.title}>{t.dashboard.title}</Text>
         <TouchableOpacity
           style={styles.notificationButton}
           onPress={onNotifications}
@@ -47,7 +48,7 @@ export function DashboardHeader({
             activeOpacity={0.7}
           >
             <Plus size={16} color="#ffffff" />
-            <Text style={styles.buttonText}>Add</Text>
+            <Text style={styles.buttonText}>{t.dashboard.add}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -56,7 +57,7 @@ export function DashboardHeader({
             activeOpacity={0.7}
           >
             <Clock size={16} color="#ffffff" />
-            <Text style={styles.buttonText}>Log</Text>
+            <Text style={styles.buttonText}>Moto-soat</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -65,7 +66,7 @@ export function DashboardHeader({
             activeOpacity={0.7}
           >
             <Wrench size={16} color="#ffffff" />
-            <Text style={styles.buttonText}>Service</Text>
+            <Text style={styles.buttonText}>TXK</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -73,8 +74,8 @@ export function DashboardHeader({
             onPress={onNavigator}
             activeOpacity={0.7}
           >
-            <Navigation size={16} color="#ffffff" />
-            <Text style={styles.buttonText}>Contact</Text>
+            <Menu size={16} color="#ffffff" />
+            <Text style={styles.buttonText}>{t.dashboard.menu}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -83,7 +84,7 @@ export function DashboardHeader({
             activeOpacity={0.7}
           >
             <User size={16} color="#ffffff" />
-            <Text style={styles.buttonText}>Profile</Text>
+            <Text style={styles.buttonText}>Profil</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -92,7 +93,7 @@ export function DashboardHeader({
             activeOpacity={0.7}
           >
             <BarChart3 size={16} color="#ffffff" />
-            <Text style={styles.buttonText}>Reports</Text>
+            <Text style={styles.buttonText}>Hisobot</Text>
           </TouchableOpacity>
         </View>
       </View>

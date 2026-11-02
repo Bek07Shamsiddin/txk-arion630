@@ -1,6 +1,15 @@
-import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { ScrollView, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { t } from '@/lib/i18n/uz';
+import type { DashboardFilter } from '@/lib/tractorCard';
 
-export type FilterType = 'all' | 'service-required';
+export type FilterType = DashboardFilter;
+
+const TABS: { key: FilterType; label: string }[] = [
+  { key: 'all', label: t.dashboard.filterAll },
+  { key: 'ok', label: t.dashboard.filterOk },
+  { key: 'soon', label: t.dashboard.filterSoon },
+  { key: 'overdue', label: t.dashboard.filterOverdue },
+];
 
 interface FilterTabsProps {
   activeFilter: FilterType;
@@ -9,73 +18,26 @@ interface FilterTabsProps {
 
 export function FilterTabs({ activeFilter, onFilterChange }: FilterTabsProps) {
   return (
-    <View style={styles.container}>
-      <TouchableOpacity
-        style={[
-          styles.tab,
-          activeFilter === 'all' && styles.tabActive,
-        ]}
-        onPress={() => onFilterChange('all')}
-        activeOpacity={0.7}
-      >
-        <Text
-          style={[
-            styles.tabText,
-            activeFilter === 'all' && styles.tabTextActive,
-          ]}
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.scroll} contentContainerStyle={styles.container}>
+      {TABS.map((tab) => (
+        <TouchableOpacity
+          key={tab.key}
+          style={[styles.tab, activeFilter === tab.key && styles.tabActive]}
+          onPress={() => onFilterChange(tab.key)}
+          activeOpacity={0.7}
         >
-          All Tractors
-        </Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[
-          styles.tab,
-          activeFilter === 'service-required' && styles.tabActive,
-        ]}
-        onPress={() => onFilterChange('service-required')}
-        activeOpacity={0.7}
-      >
-        <Text
-          style={[
-            styles.tabText,
-            activeFilter === 'service-required' && styles.tabTextActive,
-          ]}
-        >
-          Service Required
-        </Text>
-      </TouchableOpacity>
-    </View>
+          <Text style={[styles.tabText, activeFilter === tab.key && styles.tabTextActive]}>{tab.label}</Text>
+        </TouchableOpacity>
+      ))}
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    backgroundColor: '#ffffff',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: '#f3f4f6',
-    alignItems: 'center',
-  },
-  tabActive: {
-    backgroundColor: '#1f2937',
-  },
-  tabText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#6b7280',
-  },
-  tabTextActive: {
-    color: '#ffffff',
-  },
+  scroll: { flexGrow: 0, borderBottomWidth: 1, borderBottomColor: '#e5e7eb', backgroundColor: '#ffffff' },
+  container: { paddingHorizontal: 16, paddingVertical: 12, gap: 8 },
+  tab: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8, backgroundColor: '#f3f4f6', alignItems: 'center' },
+  tabActive: { backgroundColor: '#1f2937' },
+  tabText: { fontSize: 13, fontWeight: '500', color: '#6b7280' },
+  tabTextActive: { color: '#ffffff' },
 });
