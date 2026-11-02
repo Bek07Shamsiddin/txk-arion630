@@ -63,6 +63,8 @@ function RootLayoutNav() {
         <Stack.Screen name="notifications" />
         <Stack.Screen name="profile" />
         <Stack.Screen name="reports" />
+        <Stack.Screen name="simulator" />
+        <Stack.Screen name="regulation-admin" />
         <Stack.Screen name="tractor-details" />
         <Stack.Screen name="+not-found" />
       </Stack>
