@@ -42,7 +42,7 @@ export const DEFAULT_REGULATION: RegulationLevel[] = [
     intervalHours: 50,
     kind: 'once',
     covers: [],
-    parts: [part('Engine oil'), part('Oil filter'), part('Air filter')],
+    parts: [part('Dvigatel moyi'), part('Moy filtri'), part('Havo filtri')],
     durationHours: 2,
   },
   {
@@ -51,7 +51,7 @@ export const DEFAULT_REGULATION: RegulationLevel[] = [
     intervalHours: 100,
     kind: 'once',
     covers: [],
-    parts: [part('Engine oil'), part('Oil filter'), part('Air filter')],
+    parts: [part('Dvigatel moyi'), part('Moy filtri'), part('Havo filtri')],
     durationHours: 2,
   },
   {
@@ -60,7 +60,7 @@ export const DEFAULT_REGULATION: RegulationLevel[] = [
     intervalHours: 250,
     kind: 'periodic',
     covers: [],
-    parts: [part('Engine oil'), part('Oil filter')],
+    parts: [part('Dvigatel moyi'), part('Moy filtri')],
     durationHours: 1,
   },
   {
@@ -69,7 +69,7 @@ export const DEFAULT_REGULATION: RegulationLevel[] = [
     intervalHours: 500,
     kind: 'periodic',
     covers: ['T250'],
-    parts: [part('Fuel filter'), part('Air filter')],
+    parts: [part("Yoqilg'i filtri"), part('Havo filtri')],
     durationHours: 1.5,
   },
   {
@@ -78,7 +78,7 @@ export const DEFAULT_REGULATION: RegulationLevel[] = [
     intervalHours: 1000,
     kind: 'periodic',
     covers: ['T500', 'T250'],
-    parts: [part('Transmission oil'), part('Transmission filter')],
+    parts: [part('Transmissiya moyi'), part('Transmissiya filtri')],
     durationHours: 3,
   },
 ];
