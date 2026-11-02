@@ -1,251 +1,119 @@
-import { supabase } from './supabase';
+import { downtimeHours, technicalReadiness } from './core/readiness';
+import { db } from './db';
+import { listTractorViews } from './services/tractors';
 
-export interface TractorMotoHourStats {
+const inRange = (date: string, from: string, to: string) => date >= from && date <= to;
+const round1 = (n: number) => Math.round(n * 10) / 10;
+
+export type ReadinessRow = {
   tractorId: string;
   model: string;
-  serialNumber: string;
-  currentMotoHours: number;
-  totalHoursLogged: number;
-  averageHoursPerDay: number;
-  lastLogDate: string | null;
-  logCount: number;
+  work: number;
+  service: number;
+  downtime: number;
+  kTt: number | null;
+};
+
+/** Davr [from, to] uchun texnik tayyorlik koeffitsienti K_tt. */
+export async function readinessByTractor(from: string, to: string): Promise<ReadinessRow[]> {
+  const [tractors, readings, services, requests, settings] = await Promise.all([
+    db.tractors.list(),
+    db.motoReadings.list(),
+    db.serviceRecords.list(),
+    db.mechanicRequests.list(),
+    db.settings.get(),
+  ]);
+  const nowIso = new Date().toISOString();
+  return tractors.map((t) => {
+    const work = readings
+      .filter((r) => r.tractorId === t.id && inRange(r.date, from, to))
+      .reduce((s, r) => s + r.physHours, 0);
+    const service = services
+      .filter((r) => r.tractorId === t.id && inRange(r.date, from, to))
+      .reduce((s, r) => s + r.durationHours, 0);
+    const downtime = requests
+      .filter((r) => r.tractorId === t.id && inRange(r.openedAt.slice(0, 10), from, to))
+      .reduce((s, r) => s + downtimeHours(r.openedAt, r.closedAt ?? nowIso, settings.shiftHoursPerDay), 0);
+    return { tractorId: t.id, model: t.model, work, service, downtime, kTt: technicalReadiness(work, service, downtime) };
+  });
 }
 
-export interface PartsUsageStats {
-  partName: string;
-  totalQuantity: number;
-  requestCount: number;
-  pendingCount: number;
-  deliveredCount: number;
-  lastRequestDate: string;
+export type PhysVsEquivRow = { tractorId: string; model: string; phys: number; equiv: number; ratio: number };
+
+/** Fizik va keltirilgan soatlar (barcha yozuvlar bo'yicha); ratio = equiv / phys. */
+export async function physVsEquiv(): Promise<PhysVsEquivRow[]> {
+  const [tractors, readings] = await Promise.all([db.tractors.list(), db.motoReadings.list()]);
+  return tractors.map((t) => {
+    const mine = readings.filter((r) => r.tractorId === t.id);
+    const phys = mine.reduce((s, r) => s + r.physHours, 0);
+    const equiv = mine.reduce((s, r) => s + r.equivHours, 0);
+    return { tractorId: t.id, model: t.model, phys, equiv, ratio: phys > 0 ? equiv / phys : 1 };
+  });
 }
 
-export interface TechnicianPerformance {
-  technicianId: string;
-  technicianName: string;
-  completedServices: number;
-  completedCalls: number;
-  averageResponseTime: number;
-  totalWorkHours: number;
-  lastActivityDate: string | null;
+export type OverdueRow = { tractorId: string; model: string; levelName: string; overdueHours: number };
+
+export async function overdueList(today: string): Promise<OverdueRow[]> {
+  const views = await listTractorViews(today);
+  const out: OverdueRow[] = [];
+  for (const v of views) {
+    for (const s of v.statuses) {
+      if (s.state === 'overdue') {
+        out.push({
+          tractorId: v.tractor.id,
+          model: v.tractor.model,
+          levelName: s.name,
+          overdueHours: round1(Math.abs(s.remainingHours)),
+        });
+      }
+    }
+  }
+  return out;
 }
 
-export interface ServiceOverdueItem {
+export type PartsUsageRow = { partName: string; requested: number; delivered: number };
+
+export async function partsUsage(): Promise<PartsUsageRow[]> {
+  const reqs = await db.partsRequests.list();
+  const map = new Map<string, PartsUsageRow>();
+  for (const r of reqs) {
+    if (r.status === 'cancelled') continue;
+    const row = map.get(r.partName) ?? { partName: r.partName, requested: 0, delivered: 0 };
+    row.requested += r.quantity;
+    if (r.status === 'delivered') row.delivered += r.quantity;
+    map.set(r.partName, row);
+  }
+  return [...map.values()].sort((a, b) => b.requested - a.requested || a.partName.localeCompare(b.partName));
+}
+
+export type OperatorActivityRow = {
+  userId: string;
+  name: string;
   tractorId: string;
   model: string;
-  serialNumber: string;
-  currentMotoHours: number;
-  nextServiceHours: number;
-  hoursOverdue: number;
-  location: string;
-  status: string;
-}
+  hours: number;
+  days: number;
+};
 
-export interface MotoHourHistory {
-  date: string;
-  value: number;
-  tractorModel: string;
-}
-
-export async function getTractorMotoHourStats(): Promise<TractorMotoHourStats[]> {
-  const { data: tractors, error: tractorsError } = await supabase
-    .from('tractors')
-    .select('id, model, serial_number, current_moto_hours');
-
-  if (tractorsError) throw tractorsError;
-  if (!tractors) return [];
-
-  const stats: TractorMotoHourStats[] = [];
-
-  for (const tractor of tractors) {
-    const { data: motoHours, error: motoHoursError } = await supabase
-      .from('moto_hours')
-      .select('value, date, created_at')
-      .eq('tractor_id', tractor.id)
-      .order('date', { ascending: false });
-
-    if (motoHoursError) continue;
-
-    const totalHours = motoHours?.reduce((sum, log) => sum + log.value, 0) || 0;
-    const logCount = motoHours?.length || 0;
-
-    let averageHoursPerDay = 0;
-    if (motoHours && motoHours.length > 1) {
-      const oldestDate = new Date(motoHours[motoHours.length - 1].date);
-      const newestDate = new Date(motoHours[0].date);
-      const daysDiff = Math.max(
-        1,
-        Math.floor((newestDate.getTime() - oldestDate.getTime()) / (1000 * 60 * 60 * 24))
-      );
-      averageHoursPerDay = totalHours / daysDiff;
-    }
-
-    stats.push({
-      tractorId: tractor.id,
-      model: tractor.model,
-      serialNumber: tractor.serial_number,
-      currentMotoHours: tractor.current_moto_hours,
-      totalHoursLogged: totalHours,
-      averageHoursPerDay: Math.round(averageHoursPerDay * 10) / 10,
-      lastLogDate: motoHours && motoHours.length > 0 ? motoHours[0].date : null,
-      logCount,
-    });
+export async function operatorActivity(from: string, to: string): Promise<OperatorActivityRow[]> {
+  const [readings, users, tractors] = await Promise.all([db.motoReadings.list(), db.users.list(), db.tractors.list()]);
+  const groups = new Map<string, { userId: string; tractorId: string; hours: number; dates: Set<string> }>();
+  for (const r of readings) {
+    if (!inRange(r.date, from, to)) continue;
+    const key = `${r.userId}|${r.tractorId}`;
+    const g = groups.get(key) ?? { userId: r.userId, tractorId: r.tractorId, hours: 0, dates: new Set<string>() };
+    g.hours += r.physHours;
+    g.dates.add(r.date);
+    groups.set(key, g);
   }
-
-  return stats;
-}
-
-export async function getPartsUsageStats(): Promise<PartsUsageStats[]> {
-  const { data: partsRequests, error } = await supabase
-    .from('parts_requests')
-    .select('part_name, quantity, delivery_status, request_date')
-    .order('request_date', { ascending: false });
-
-  if (error) throw error;
-  if (!partsRequests) return [];
-
-  const partsMap = new Map<string, PartsUsageStats>();
-
-  for (const request of partsRequests) {
-    const existing = partsMap.get(request.part_name);
-
-    if (existing) {
-      existing.totalQuantity += request.quantity;
-      existing.requestCount += 1;
-      if (request.delivery_status === 'pending') existing.pendingCount += 1;
-      if (request.delivery_status === 'delivered') existing.deliveredCount += 1;
-      if (
-        new Date(request.request_date) > new Date(existing.lastRequestDate)
-      ) {
-        existing.lastRequestDate = request.request_date;
-      }
-    } else {
-      partsMap.set(request.part_name, {
-        partName: request.part_name,
-        totalQuantity: request.quantity,
-        requestCount: 1,
-        pendingCount: request.delivery_status === 'pending' ? 1 : 0,
-        deliveredCount: request.delivery_status === 'delivered' ? 1 : 0,
-        lastRequestDate: request.request_date,
-      });
-    }
-  }
-
-  return Array.from(partsMap.values()).sort((a, b) => b.totalQuantity - a.totalQuantity);
-}
-
-export async function getTechnicianPerformance(): Promise<TechnicianPerformance[]> {
-  const { data: technicians, error: techError } = await supabase
-    .from('users')
-    .select('id, name')
-    .eq('role', 'technician');
-
-  if (techError) throw techError;
-  if (!technicians) return [];
-
-  const performance: TechnicianPerformance[] = [];
-
-  for (const tech of technicians) {
-    const { data: services, error: servicesError } = await supabase
-      .from('service_logs')
-      .select('created_at')
-      .eq('technician_id', tech.id);
-
-    const { data: calls, error: callsError } = await supabase
-      .from('technician_calls')
-      .select('created_at, updated_at, status')
-      .eq('assigned_technician_id', tech.id)
-      .eq('status', 'completed');
-
-    const completedServices = services?.length || 0;
-    const completedCalls = calls?.length || 0;
-
-    let totalResponseTime = 0;
-    if (calls && calls.length > 0) {
-      for (const call of calls) {
-        const created = new Date(call.created_at);
-        const updated = new Date(call.updated_at);
-        totalResponseTime += (updated.getTime() - created.getTime()) / (1000 * 60 * 60);
-      }
-    }
-
-    const averageResponseTime =
-      completedCalls > 0 ? Math.round((totalResponseTime / completedCalls) * 10) / 10 : 0;
-
-    const allActivities = [
-      ...(services || []).map((s) => s.created_at),
-      ...(calls || []).map((c) => c.created_at),
-    ].sort();
-
-    const lastActivityDate =
-      allActivities.length > 0 ? allActivities[allActivities.length - 1] : null;
-
-    performance.push({
-      technicianId: tech.id,
-      technicianName: tech.name,
-      completedServices,
-      completedCalls,
-      averageResponseTime,
-      totalWorkHours: Math.round(totalResponseTime * 10) / 10,
-      lastActivityDate,
-    });
-  }
-
-  return performance.sort((a, b) => b.completedServices - a.completedServices);
-}
-
-export async function getServiceOverdueList(): Promise<ServiceOverdueItem[]> {
-  const { data: tractors, error } = await supabase
-    .from('tractors')
-    .select('id, model, serial_number, current_moto_hours, next_service_hours, location, status');
-
-  if (error) throw error;
-  if (!tractors) return [];
-
-  const overdue = tractors
-    .filter((t) => t.current_moto_hours >= t.next_service_hours)
-    .map((t) => ({
-      tractorId: t.id,
-      model: t.model,
-      serialNumber: t.serial_number,
-      currentMotoHours: t.current_moto_hours,
-      nextServiceHours: t.next_service_hours,
-      hoursOverdue: t.current_moto_hours - t.next_service_hours,
-      location: t.location,
-      status: t.status,
-    }));
-
-  return overdue.sort((a, b) => b.hoursOverdue - a.hoursOverdue);
-}
-
-export async function getMotoHourHistory(
-  startDate?: string,
-  endDate?: string
-): Promise<MotoHourHistory[]> {
-  let query = supabase
-    .from('moto_hours')
-    .select(`
-      value,
-      date,
-      tractors!inner(model)
-    `)
-    .order('date', { ascending: true });
-
-  if (startDate) {
-    query = query.gte('date', startDate);
-  }
-  if (endDate) {
-    query = query.lte('date', endDate);
-  }
-
-  const { data, error } = await query;
-
-  if (error) throw error;
-  if (!data) return [];
-
-  return data.map((item: any) => ({
-    date: item.date,
-    value: item.value,
-    tractorModel: item.tractors.model,
-  }));
+  return [...groups.values()]
+    .map((g) => ({
+      userId: g.userId,
+      name: users.find((u) => u.id === g.userId)?.name ?? '—',
+      tractorId: g.tractorId,
+      model: tractors.find((t) => t.id === g.tractorId)?.model ?? '—',
+      hours: g.hours,
+      days: g.dates.size,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name) || a.model.localeCompare(b.model));
 }
