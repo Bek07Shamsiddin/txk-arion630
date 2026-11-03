@@ -13,7 +13,10 @@
       "command": "npm run web",
       "isBackground": true,
       "problemMatcher": [],
-      "group": { "kind": "build", "isDefault": true }
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
     },
     {
       "label": "3. Telefonda ochish - Expo Go (npm start)",
@@ -27,13 +30,27 @@
       "type": "shell",
       "command": "npm test",
       "problemMatcher": [],
-      "group": { "kind": "test", "isDefault": true }
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      }
     },
     {
       "label": "5. Tiplarni tekshirish (npm run typecheck)",
       "type": "shell",
       "command": "npm run typecheck",
-      "problemMatcher": ["$tsc"]
+      "problemMatcher": [
+        "$tsc"
+      ]
     }
-  ]
+  ],
+  "options": {
+    "shell": {
+      "executable": "cmd.exe",
+      "args": [
+        "/d",
+        "/c"
+      ]
+    }
+  }
 }

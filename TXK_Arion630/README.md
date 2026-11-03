@@ -12,6 +12,8 @@ Talab: [Node.js](https://nodejs.org) 20 yoki undan yangi (LTS) va VS Code.
 
 **VS Code orqali:**
 
+> PowerShell’da *“running scripts is disabled”* xatosi chiqsa: `npm` o‘rniga `npm.cmd` yozing (masalan `npm.cmd install`) yoki terminalni **Command Prompt** ga almashtiring (loyiha sozlamasida standart qilib qo‘yilgan).
+
 1. VS Code → *File → Open Folder…* → `TXK_Arion630` papkasini oching.
 2. Terminal oching (*Terminal → New Terminal*) va bir marta:
    ```
@@ -27,7 +29,16 @@ Talab: [Node.js](https://nodejs.org) 20 yoki undan yangi (LTS) va VS Code.
 
 VS Code’da tayyor vazifalar ham bor: *Terminal → Run Task…* → “1. Paketlarni o‘rnatish”, “2. Ilovani brauzerda ochish”, “4. Testlar”.
 
-Birinchi kirishda **Administrator** ni tanlang (PIN yo‘q). Ma’lumotlar brauzer/telefon xotirasida saqlanadi; tozalash uchun brauzerda sayt ma’lumotlarini o‘chiring.
+Namunaviy foydalanuvchilar (hakamlarga ko‘rsatish uchun; PIN oson va bir martalik — kirgach admin “Foydalanuvchilar” ekranida almashtiradi):
+
+| Foydalanuvchi | Rol | PIN |
+|---|---|---|
+| Ilxomjon Xolmirzayev — asosiy muallif, bosh dasturchi (+998 99 977 7555) | Administrator | 1111 |
+| Inomjonov Mansurbek | Texnik (mexanik) | 2222 |
+| Yodgoraliyev Nozimjon | Texnik (mexanik) | 3333 |
+| Rahmatov Islomjon | Texnik (mexanik) | 4444 |
+
+Namunaviy traktorlar: Mingbuloq tumani, Claas Arion 630/630C — A2003495, A2003707, A2004017, A2004100. Ma’lumotlar brauzer/telefon xotirasida saqlanadi; tozalash uchun brauzerda sayt ma’lumotlarini o‘chiring.
 
 ## 1. Ilova haqida
 

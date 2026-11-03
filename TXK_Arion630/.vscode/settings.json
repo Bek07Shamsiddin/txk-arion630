@@ -1,5 +1,10 @@
 {
   "typescript.tsdk": "node_modules/typescript/lib",
   "files.eol": "\n",
-  "files.exclude": { "node_modules": true, "dist": true, ".expo": true }
+  "files.exclude": {
+    "node_modules": true,
+    "dist": true,
+    ".expo": true
+  },
+  "terminal.integrated.defaultProfile.windows": "Command Prompt"
 }
