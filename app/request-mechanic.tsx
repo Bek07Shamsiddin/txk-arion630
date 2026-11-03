@@ -12,6 +12,7 @@ import { ScreenHeader } from '@/components/ScreenHeader';
 import { formStyles as s } from '@/components/formStyles';
 import { showMessage } from '@/lib/notify';
 import { t } from '@/lib/i18n/uz';
+import { goBack } from '@/lib/nav';
 
 export default function RequestMechanicScreen() {
   const router = useRouter();
@@ -50,7 +51,7 @@ export default function RequestMechanicScreen() {
   if (!Permissions.canRequestMechanic(user)) {
     return (
       <View style={s.container}>
-        <ScreenHeader title={t.mechanic.title} onBack={() => router.back()} />
+        <ScreenHeader title={t.mechanic.title} onBack={() => goBack(router)} />
         <Text style={s.forbidden}>{t.mechanic.forbidden}</Text>
       </View>
     );
@@ -67,7 +68,7 @@ export default function RequestMechanicScreen() {
     try {
       await createMechanicRequest({ tractorId, problem, userId: user.id });
       showMessage(t.mechanic.title, t.mechanic.sent);
-      router.back();
+      goBack(router);
     } catch (err) {
       showMessage(t.common.error, (err as Error).message || t.errors.storage);
     } finally {
@@ -79,7 +80,7 @@ export default function RequestMechanicScreen() {
     <View style={s.container}>
       <ScreenHeader
         title={t.mechanic.title}
-        onBack={() => router.back()}
+        onBack={() => goBack(router)}
         right={{ label: t.mechanic.myRequests, onPress: () => router.push('/mechanic-requests' as never) }}
       />
       {loading ? (

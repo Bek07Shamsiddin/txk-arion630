@@ -24,6 +24,7 @@ import { buildShares, physHoursPreview, readingErrorMessage, sharesSum, type Sha
 import { TractorPicker } from '@/components/TractorPicker';
 import { confirmAction, showMessage } from '@/lib/notify';
 import { t } from '@/lib/i18n/uz';
+import { goBack } from '@/lib/nav';
 
 const fmt = (n: number) => String(Math.round(n * 100) / 100);
 
@@ -74,7 +75,7 @@ export default function AddMotoHoursScreen() {
   if (!Permissions.canLogMotoHours(user)) {
     return (
       <View style={styles.container}>
-        <Header onBack={() => router.back()} />
+        <Header onBack={() => goBack(router)} />
         <Text style={styles.forbidden}>{t.hours.forbidden}</Text>
       </View>
     );
@@ -127,7 +128,7 @@ export default function AddMotoHoursScreen() {
         showMessage(t.common.error, readingErrorMessage(res.error));
         return;
       }
-      router.back();
+      goBack(router);
     } catch (err) {
       showMessage(t.common.error, (err as Error).message || t.errors.storage);
     } finally {
@@ -149,7 +150,7 @@ export default function AddMotoHoursScreen() {
 
   return (
     <View style={styles.container}>
-      <Header onBack={() => router.back()} />
+      <Header onBack={() => goBack(router)} />
       {loading ? (
         <ActivityIndicator style={{ marginTop: 24 }} />
       ) : (

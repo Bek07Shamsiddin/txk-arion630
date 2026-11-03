@@ -12,6 +12,7 @@ import { ParamForm } from '@/components/sim/ParamForm';
 import { ResultTable } from '@/components/sim/ResultTable';
 import { SensitivityChart } from '@/components/sim/SensitivityChart';
 import { t } from '@/lib/i18n/uz';
+import { goBack } from '@/lib/nav';
 
 type Mode = 'run' | 'sens' | null;
 
@@ -46,7 +47,7 @@ export default function SimulatorScreen() {
   if (!ops || !form) {
     return (
       <View style={s.container}>
-        <ScreenHeader title={t.sim.title} onBack={() => router.back()} />
+        <ScreenHeader title={t.sim.title} onBack={() => goBack(router)} />
         <ActivityIndicator style={{ marginTop: 24 }} />
       </View>
     );
@@ -89,7 +90,7 @@ export default function SimulatorScreen() {
 
   return (
     <View style={s.container}>
-      <ScreenHeader title={t.sim.title} onBack={() => router.back()} />
+      <ScreenHeader title={t.sim.title} onBack={() => goBack(router)} />
       <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
         <Text style={styles.section}>{t.sim.params}</Text>
         <ParamForm form={form} errors={errors} ops={ops} disabled={disabled} onChange={setField} onMixChange={setMix} />

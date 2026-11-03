@@ -10,6 +10,7 @@ import { ScreenHeader } from '@/components/ScreenHeader';
 import { formStyles as s } from '@/components/formStyles';
 import { showMessage } from '@/lib/notify';
 import { t } from '@/lib/i18n/uz';
+import { goBack } from '@/lib/nav';
 
 export default function PartsHistoryScreen() {
   const router = useRouter();
@@ -44,7 +45,7 @@ export default function PartsHistoryScreen() {
   if (!Permissions.canRequestParts(user)) {
     return (
       <View style={s.container}>
-        <ScreenHeader title={t.parts.historyTitle} onBack={() => router.back()} />
+        <ScreenHeader title={t.parts.historyTitle} onBack={() => goBack(router)} />
         <Text style={s.forbidden}>{t.parts.forbidden}</Text>
       </View>
     );
@@ -58,7 +59,7 @@ export default function PartsHistoryScreen() {
 
   return (
     <View style={s.container}>
-      <ScreenHeader title={t.parts.historyTitle} onBack={() => router.back()} />
+      <ScreenHeader title={t.parts.historyTitle} onBack={() => goBack(router)} />
       {loading ? (
         <ActivityIndicator style={{ marginTop: 24 }} />
       ) : (

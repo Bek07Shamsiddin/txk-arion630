@@ -11,6 +11,7 @@ import { ScreenHeader } from '@/components/ScreenHeader';
 import { formStyles as s } from '@/components/formStyles';
 import { confirmAction, showMessage } from '@/lib/notify';
 import { t } from '@/lib/i18n/uz';
+import { goBack } from '@/lib/nav';
 
 export default function PartsAdminScreen() {
   const router = useRouter();
@@ -42,7 +43,7 @@ export default function PartsAdminScreen() {
   if (!Permissions.canManageParts(user)) {
     return (
       <View style={s.container}>
-        <ScreenHeader title={t.parts.adminTitle} onBack={() => router.back()} />
+        <ScreenHeader title={t.parts.adminTitle} onBack={() => goBack(router)} />
         <Text style={s.forbidden}>{t.parts.forbiddenAdmin}</Text>
       </View>
     );
@@ -68,7 +69,7 @@ export default function PartsAdminScreen() {
     <View style={s.container}>
       <ScreenHeader
         title={t.parts.adminTitle}
-        onBack={() => router.back()}
+        onBack={() => goBack(router)}
         right={{ label: t.parts.history, onPress: () => router.push('/parts-history' as never) }}
       />
       {loading ? (

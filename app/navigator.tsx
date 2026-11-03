@@ -4,6 +4,7 @@ import { ArrowLeft, ChevronRight } from 'lucide-react-native';
 import { useSession } from '@/lib/session';
 import { Permissions } from '@/lib/permissions';
 import { t } from '@/lib/i18n/uz';
+import { goBack } from '@/lib/nav';
 
 type SessionUser = ReturnType<typeof useSession>['user'];
 type Item = { label: string; path: string; visible: (u: SessionUser) => boolean };
@@ -34,7 +35,7 @@ export default function NavigatorScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => goBack(router)} style={styles.backButton}>
           <ArrowLeft size={24} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.title}>{t.menu.title}</Text>

@@ -11,6 +11,7 @@ import { ScreenHeader } from '@/components/ScreenHeader';
 import { formStyles as s } from '@/components/formStyles';
 import { showMessage } from '@/lib/notify';
 import { t } from '@/lib/i18n/uz';
+import { goBack } from '@/lib/nav';
 
 const fmt = (iso: string) => iso.slice(0, 16).replace('T', ' ');
 
@@ -49,7 +50,7 @@ export default function MechanicRequestsScreen() {
   if (!canSee) {
     return (
       <View style={s.container}>
-        <ScreenHeader title={t.mechanic.listTitle} onBack={() => router.back()} />
+        <ScreenHeader title={t.mechanic.listTitle} onBack={() => goBack(router)} />
         <Text style={s.forbidden}>{t.mechanic.forbiddenList}</Text>
       </View>
     );
@@ -85,7 +86,7 @@ export default function MechanicRequestsScreen() {
 
   return (
     <View style={s.container}>
-      <ScreenHeader title={t.mechanic.listTitle} onBack={() => router.back()} />
+      <ScreenHeader title={t.mechanic.listTitle} onBack={() => goBack(router)} />
       {loading ? (
         <ActivityIndicator style={{ marginTop: 24 }} />
       ) : (

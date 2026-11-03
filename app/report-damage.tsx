@@ -14,6 +14,7 @@ import { ScreenHeader } from '@/components/ScreenHeader';
 import { formStyles as s } from '@/components/formStyles';
 import { showMessage } from '@/lib/notify';
 import { t } from '@/lib/i18n/uz';
+import { goBack } from '@/lib/nav';
 
 export default function ReportDamageScreen() {
   const router = useRouter();
@@ -53,7 +54,7 @@ export default function ReportDamageScreen() {
   if (!Permissions.canReportDamage(user)) {
     return (
       <View style={s.container}>
-        <ScreenHeader title={t.damage.title} onBack={() => router.back()} />
+        <ScreenHeader title={t.damage.title} onBack={() => goBack(router)} />
         <Text style={s.forbidden}>{t.damage.forbidden}</Text>
       </View>
     );
@@ -90,7 +91,7 @@ export default function ReportDamageScreen() {
         createdAt: new Date().toISOString(),
       });
       showMessage(t.damage.title, t.damage.sent);
-      router.back();
+      goBack(router);
     } catch (err) {
       showMessage(t.common.error, (err as Error).message || t.errors.storage);
     } finally {
@@ -100,7 +101,7 @@ export default function ReportDamageScreen() {
 
   return (
     <View style={s.container}>
-      <ScreenHeader title={t.damage.title} onBack={() => router.back()} />
+      <ScreenHeader title={t.damage.title} onBack={() => goBack(router)} />
       {loading ? (
         <ActivityIndicator style={{ marginTop: 24 }} />
       ) : (

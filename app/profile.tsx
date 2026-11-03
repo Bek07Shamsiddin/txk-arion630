@@ -7,6 +7,7 @@ import { ScreenHeader } from '@/components/ScreenHeader';
 import { formStyles as s } from '@/components/formStyles';
 import { confirmAction, showMessage } from '@/lib/notify';
 import { t } from '@/lib/i18n/uz';
+import { goBack } from '@/lib/nav';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -28,7 +29,7 @@ export default function ProfileScreen() {
 
   return (
     <View style={s.container}>
-      <ScreenHeader title={t.profile.title} onBack={() => router.back()} />
+      <ScreenHeader title={t.profile.title} onBack={() => goBack(router)} />
       {user ? (
         <View style={s.scroll}>
           <View style={s.group}>

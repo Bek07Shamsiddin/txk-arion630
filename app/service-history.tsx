@@ -12,6 +12,7 @@ import { byDateThenCreated } from '@/lib/services/tractors';
 import { deleteServiceRecord } from '@/lib/services/service';
 import { confirmAction, showMessage } from '@/lib/notify';
 import { t } from '@/lib/i18n/uz';
+import { goBack } from '@/lib/nav';
 
 const fmt = (n: number) => String(Math.round(n * 100) / 100);
 
@@ -75,7 +76,7 @@ export default function ServiceHistoryScreen() {
   if (!Permissions.canViewServiceHistory(user)) {
     return (
       <View style={styles.container}>
-        <Header onBack={() => router.back()} />
+        <Header onBack={() => goBack(router)} />
         <Text style={styles.empty}>{t.service.forbidden}</Text>
       </View>
     );
@@ -87,7 +88,7 @@ export default function ServiceHistoryScreen() {
 
   return (
     <View style={styles.container}>
-      <Header onBack={() => router.back()} />
+      <Header onBack={() => goBack(router)} />
       {loading ? (
         <ActivityIndicator style={{ marginTop: 24 }} />
       ) : (

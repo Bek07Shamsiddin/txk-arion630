@@ -27,6 +27,7 @@ import { PhysVsEquivReport, loadFlag } from '@/components/reports/PhysVsEquivRep
 import { OverdueReport } from '@/components/reports/OverdueReport';
 import { PartsUsageReport } from '@/components/reports/PartsUsageReport';
 import { OperatorActivityReport } from '@/components/reports/OperatorActivityReport';
+import { goBack } from '@/lib/nav';
 
 type Tab = 'readiness' | 'physEquiv' | 'overdue' | 'parts' | 'operators';
 
@@ -128,7 +129,7 @@ export default function ReportsScreen() {
   if (!allowed) {
     return (
       <View style={s.container}>
-        <ScreenHeader title={t.reports.title} onBack={() => router.back()} />
+        <ScreenHeader title={t.reports.title} onBack={() => goBack(router)} />
         <Text style={s.forbidden}>{t.reports.forbidden}</Text>
       </View>
     );
@@ -138,7 +139,7 @@ export default function ReportsScreen() {
 
   return (
     <View style={s.container}>
-      <ScreenHeader title={t.reports.title} onBack={() => router.back()} />
+      <ScreenHeader title={t.reports.title} onBack={() => goBack(router)} />
       <View style={styles.tabs}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           {TABS.map((x) => (

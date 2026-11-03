@@ -9,6 +9,7 @@ import { todayLocal } from '@/lib/core/dates';
 import { getTractorView, type TractorView } from '@/lib/services/tractors';
 import { forecastLine, remainingText, STATUS_COLORS } from '@/lib/tractorCard';
 import { t } from '@/lib/i18n/uz';
+import { goBack } from '@/lib/nav';
 
 const STATE_COLOR = { ok: STATUS_COLORS.green, soon: STATUS_COLORS.yellow, overdue: STATUS_COLORS.red } as const;
 const fmt = (n: number) => String(Math.round(n * 10) / 10);
@@ -56,7 +57,7 @@ export default function TractorDetailsScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => goBack(router)} style={styles.backButton}>
           <ArrowLeft size={24} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.title}>{t.tractor.detailsTitle}</Text>

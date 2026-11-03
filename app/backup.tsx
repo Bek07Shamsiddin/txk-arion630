@@ -6,6 +6,7 @@ import { ScreenHeader } from '@/components/ScreenHeader';
 import { BackupActions } from '@/components/BackupActions';
 import { formStyles as s } from '@/components/formStyles';
 import { t } from '@/lib/i18n/uz';
+import { goBack } from '@/lib/nav';
 
 export default function BackupScreen() {
   const router = useRouter();
@@ -19,7 +20,7 @@ export default function BackupScreen() {
   if (!Permissions.isAdmin(user)) {
     return (
       <View style={s.container}>
-        <ScreenHeader title={t.backup.title} onBack={() => router.back()} />
+        <ScreenHeader title={t.backup.title} onBack={() => goBack(router)} />
         <Text style={s.forbidden}>{t.backup.forbidden}</Text>
       </View>
     );
@@ -27,7 +28,7 @@ export default function BackupScreen() {
 
   return (
     <View style={s.container}>
-      <ScreenHeader title={t.backup.title} onBack={() => router.back()} />
+      <ScreenHeader title={t.backup.title} onBack={() => goBack(router)} />
       <ScrollView contentContainerStyle={s.scroll}>
         <BackupActions onRestored={reload} />
       </ScrollView>

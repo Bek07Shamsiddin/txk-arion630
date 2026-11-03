@@ -27,6 +27,7 @@ import { confirmAction, showMessage } from '@/lib/notify';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { formStyles as s } from '@/components/formStyles';
 import { t } from '@/lib/i18n/uz';
+import { goBack } from '@/lib/nav';
 
 type Errs = Record<string, string>;
 const EMPTY_NEW = { id: '', name: '', fuelLph: '', source: '', verified: false };
@@ -99,7 +100,7 @@ export default function RegulationAdminScreen() {
   if (!Permissions.isAdmin(user)) {
     return (
       <View style={s.container}>
-        <ScreenHeader title={t.regAdmin.title} onBack={() => router.back()} />
+        <ScreenHeader title={t.regAdmin.title} onBack={() => goBack(router)} />
         <Text style={s.forbidden}>{t.regAdmin.forbidden}</Text>
       </View>
     );
@@ -107,7 +108,7 @@ export default function RegulationAdminScreen() {
   if (loading || !settings || !settingsForm) {
     return (
       <View style={s.container}>
-        <ScreenHeader title={t.regAdmin.title} onBack={() => router.back()} />
+        <ScreenHeader title={t.regAdmin.title} onBack={() => goBack(router)} />
         <ActivityIndicator style={{ marginTop: 24 }} />
       </View>
     );
@@ -220,7 +221,7 @@ export default function RegulationAdminScreen() {
 
   return (
     <View style={s.container}>
-      <ScreenHeader title={t.regAdmin.title} onBack={() => router.back()} />
+      <ScreenHeader title={t.regAdmin.title} onBack={() => goBack(router)} />
       <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
         <Text style={styles.section}>{t.regAdmin.levels}</Text>
         {levels.map((l) => {

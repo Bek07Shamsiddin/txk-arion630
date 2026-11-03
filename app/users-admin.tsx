@@ -9,6 +9,7 @@ import { hashPin } from '@/lib/sessionStore';
 import { Permissions } from '@/lib/permissions';
 import { canDemoteOrDeactivate, isValidPin } from '@/lib/users';
 import { t } from '@/lib/i18n/uz';
+import { goBack } from '@/lib/nav';
 
 type Role = User['role'];
 const ROLES: Role[] = ['operator', 'technician', 'admin'];
@@ -51,7 +52,7 @@ export default function UsersAdminScreen() {
     return (
       <View style={styles.center}>
         <Text style={styles.error}>{t.users.adminOnly}</Text>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => goBack(router)}>
           <Text style={styles.link}>{t.common.back}</Text>
         </TouchableOpacity>
       </View>
@@ -111,7 +112,7 @@ export default function UsersAdminScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => goBack(router)}>
           <ArrowLeft size={24} color="#0f172a" />
         </TouchableOpacity>
         <Text style={styles.title}>{t.users.title}</Text>

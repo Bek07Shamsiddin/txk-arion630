@@ -15,6 +15,7 @@ import { ScreenHeader } from '@/components/ScreenHeader';
 import { formStyles as s } from '@/components/formStyles';
 import { showMessage } from '@/lib/notify';
 import { t } from '@/lib/i18n/uz';
+import { goBack } from '@/lib/nav';
 
 const URGENCIES: PartsRequest['urgency'][] = ['urgent', 'medium', 'normal'];
 
@@ -65,7 +66,7 @@ export default function RequestPartsScreen() {
   if (!Permissions.canRequestParts(user)) {
     return (
       <View style={s.container}>
-        <ScreenHeader title={t.parts.title} onBack={() => router.back()} />
+        <ScreenHeader title={t.parts.title} onBack={() => goBack(router)} />
         <Text style={s.forbidden}>{t.parts.forbidden}</Text>
       </View>
     );
@@ -93,7 +94,7 @@ export default function RequestPartsScreen() {
         parts: used,
       });
       showMessage(t.parts.title, t.parts.sent);
-      router.back();
+      goBack(router);
     } catch (err) {
       showMessage(t.common.error, (err as Error).message || t.errors.storage);
     } finally {
@@ -107,7 +108,7 @@ export default function RequestPartsScreen() {
     <View style={s.container}>
       <ScreenHeader
         title={t.parts.title}
-        onBack={() => router.back()}
+        onBack={() => goBack(router)}
         right={{
           label: manage ? t.parts.manage : t.parts.history,
           onPress: () => router.push((manage ? '/parts-admin' : '/parts-history') as never),

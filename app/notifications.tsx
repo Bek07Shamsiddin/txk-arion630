@@ -8,6 +8,7 @@ import type { AppNotification } from '@/lib/db/schema';
 import { notificationColor, notificationHref, sortNewestFirst, unreadCount } from '@/lib/notificationView';
 import { showMessage } from '@/lib/notify';
 import { t } from '@/lib/i18n/uz';
+import { goBack } from '@/lib/nav';
 
 export default function NotificationsScreen() {
   const router = useRouter();
@@ -55,7 +56,7 @@ export default function NotificationsScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => goBack(router)} style={styles.backButton}>
           <ArrowLeft size={24} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.title}>{t.notifications.title}</Text>

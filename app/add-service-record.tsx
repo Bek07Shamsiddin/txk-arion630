@@ -26,6 +26,7 @@ import { saveImage } from '@/lib/media';
 import { TractorPicker } from '@/components/TractorPicker';
 import { showMessage } from '@/lib/notify';
 import { t } from '@/lib/i18n/uz';
+import { goBack } from '@/lib/nav';
 
 export default function AddServiceRecordScreen() {
   const router = useRouter();
@@ -90,7 +91,7 @@ export default function AddServiceRecordScreen() {
   if (!Permissions.canAddServiceRecord(user)) {
     return (
       <View style={styles.container}>
-        <Header onBack={() => router.back()} />
+        <Header onBack={() => goBack(router)} />
         <Text style={styles.forbidden}>{t.service.forbidden}</Text>
       </View>
     );
@@ -138,7 +139,7 @@ export default function AddServiceRecordScreen() {
         photoUris: photos,
         userId: user.id,
       });
-      router.back();
+      goBack(router);
     } catch (err) {
       showMessage(t.common.error, (err as Error).message || t.errors.storage);
     } finally {
@@ -148,7 +149,7 @@ export default function AddServiceRecordScreen() {
 
   return (
     <View style={styles.container}>
-      <Header onBack={() => router.back()} />
+      <Header onBack={() => goBack(router)} />
       {loading ? (
         <ActivityIndicator style={{ marginTop: 24 }} />
       ) : (

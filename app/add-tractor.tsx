@@ -20,6 +20,7 @@ import { registerTractor } from '@/lib/services/tractors';
 import { saveImage } from '@/lib/media';
 import { showMessage } from '@/lib/notify';
 import { t } from '@/lib/i18n/uz';
+import { goBack } from '@/lib/nav';
 
 export default function AddTractorScreen() {
   const router = useRouter();
@@ -45,7 +46,7 @@ export default function AddTractorScreen() {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <TouchableOpacity onPress={() => goBack(router)} style={styles.backButton}>
             <ArrowLeft size={24} color="#ffffff" />
           </TouchableOpacity>
           <Text style={styles.title}>{t.tractor.addTitle}</Text>
@@ -95,7 +96,7 @@ export default function AddTractorScreen() {
         photoUri,
         initialReading: ok.initialReading,
       });
-      router.back();
+      goBack(router);
     } catch (e) {
       showMessage(t.common.error, (e as Error).message || t.errors.storage);
     } finally {
@@ -119,7 +120,7 @@ export default function AddTractorScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => goBack(router)} style={styles.backButton}>
           <ArrowLeft size={24} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.title}>{t.tractor.addTitle}</Text>
