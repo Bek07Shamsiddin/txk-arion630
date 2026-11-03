@@ -4,9 +4,9 @@ import type { Tractor, User } from './schema';
 // PIN-kodlar oson va bir martalik: kirgandan keyin admin "Foydalanuvchilar" ekranida almashtiradi.
 export const DEMO_USERS: (Omit<User, 'id' | 'createdAt' | 'pinHash'> & { pin: string })[] = [
   { name: 'Ilxomjon Xolmirzayev', role: 'admin', active: true, title: 'Asosiy muallif, bosh dasturchi', phone: '+998 99 977 7555', pin: '1111' },
-  { name: 'Inomjonov Mansurbek', role: 'technician', active: true, title: 'Mexanik', phone: null, pin: '2222' },
-  { name: 'Yodgoraliyev Nozimjon', role: 'technician', active: true, title: 'Mexanik', phone: null, pin: '3333' },
-  { name: 'Rahmatov Islomjon', role: 'technician', active: true, title: 'Mexanik', phone: null, pin: '4444' },
+  { name: 'Inomjonov Mansurbek', role: 'technician', active: true, title: 'Mexanik', phone: '+998 88 688 31 01', pin: '2222' },
+  { name: 'Yodgoraliyev Nozimjon', role: 'technician', active: true, title: 'Mexanik', phone: '+998 94 155 31 91', pin: '3333' },
+  { name: 'Rahmatov Islomjon', role: 'technician', active: true, title: 'Mexanik', phone: '+998 77 002 2011', pin: '4444' },
   { name: "Ulug'bek", role: 'operator', active: true, title: 'Traktorchi', phone: '+998 90 693 53 50', pin: '5555' },
   { name: 'Adhamjon', role: 'operator', active: true, title: 'Traktorchi', phone: '+998 91 178 31 01', pin: '6666' },
   { name: 'Islomjon', role: 'operator', active: true, title: 'Traktorchi', phone: '+998 99 977 55 25', pin: '7777' },

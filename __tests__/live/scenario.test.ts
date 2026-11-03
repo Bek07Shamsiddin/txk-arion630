@@ -72,3 +72,29 @@ test("qayta ochilganda ssenariy boshidan boshlanadi", async () => {
   const s = await states();
   expect(count(s, 'red')).toBeGreaterThanOrEqual(1);
 });
+
+test("nosozlik sikli: operator xabar beradi → usta ta'mirlaydi → ta'mir tugaydi (jadvaldagi nosozlik turi bilan)", async () => {
+  await runTo(1, 12);
+  let reqs = await db.mechanicRequests.list();
+  expect(reqs).toHaveLength(1);
+  expect(['Taqsimlash vali', 'Haydovchi nasos', 'Maxovik']).toContain(reqs[0].problem);
+  await runTo(13, 18);
+  reqs = await db.mechanicRequests.list();
+  expect(reqs[0].status).toBe('in_progress');
+  const tech = (await db.users.list()).find((u) => u.id === reqs[0].technicianId)!;
+  expect(tech.role).toBe('technician');
+  await runTo(19, 42);
+  expect((await db.mechanicRequests.list())[0].status).toBe('completed');
+});
+
+test("ssenariydan keyin ham sikl davom etadi: yangi ogohlantirish va yangi TXK chiqadi, muddati o'tgan ko'p to'planmaydi", async () => {
+  await runTo(1, SCRIPT_TICKS);
+  const services = (await db.serviceRecords.list()).length;
+  const notes = (await db.notifications.list()).length;
+  for (let t = SCRIPT_TICKS + 1; t <= SCRIPT_TICKS + 600; t++) {
+    await liveTick(t, TODAY, NOON);
+    if (t % 60 === 0) expect(count(await states(), 'red')).toBeLessThanOrEqual(2);
+  }
+  expect((await db.notifications.list()).length).toBeGreaterThan(notes);
+  expect((await db.serviceRecords.list()).length).toBeGreaterThan(services);
+}, 120000);

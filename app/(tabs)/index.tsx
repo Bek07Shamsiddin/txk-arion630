@@ -17,6 +17,7 @@ import { TractorCard } from '@/components/TractorCard';
 export default function DashboardScreen() {
   const router = useRouter();
   const [views, setViews] = useState<TractorView[]>([]);
+  const [issues, setIssues] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<FilterType>('all');
@@ -30,6 +31,14 @@ export default function DashboardScreen() {
       // N2: kalendar bo'yicha muddati o'tganlar ham eslatma sifatida chiqishi uchun.
       for (const tr of tractors) await refreshAlerts(tr.id, today);
       setViews(await listTractorViews(today));
+      const users = await db.users.list();
+      const open: Record<string, string> = {};
+      for (const m of await db.mechanicRequests.list()) {
+        if (m.status === 'completed') continue;
+        const tech = users.find((u) => u.id === m.technicianId)?.name;
+        open[m.tractorId] = m.status === 'in_progress' ? t.dashboard.issueRepair(m.problem, tech ?? '') : t.dashboard.issueWaiting(m.problem);
+      }
+      setIssues(open);
       setUnread((await db.notifications.list()).filter((n) => !n.isRead).length);
       setFailed(false);
     } catch {
@@ -94,6 +103,7 @@ export default function DashboardScreen() {
           renderItem={({ item }) => (
             <TractorCard
               view={item}
+              issue={issues[item.tractor.id] ?? null}
               onPress={() => router.push({ pathname: '/tractor-details', params: { id: item.tractor.id } })}
             />
           )}

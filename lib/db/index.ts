@@ -87,9 +87,11 @@ async function runInit(): Promise<void> {
 // Eski xotira bilan ochilganda yangi boshlang'ich foydalanuvchi va traktorlarni qo'shadi (mavjudlariga tegmaydi).
 async function addMissingSeed(): Promise<void> {
   const now = new Date().toISOString();
-  const names = new Set((await db.users.list()).map((u) => u.name));
+  const existing = await db.users.list();
   for (const { pin, ...u } of DEMO_USERS) {
-    if (!names.has(u.name)) await db.users.insert({ ...u, pinHash: hashPin(pin), createdAt: now });
+    const old = existing.find((x) => x.name === u.name);
+    if (!old) await db.users.insert({ ...u, pinHash: hashPin(pin), createdAt: now });
+    else if (old.phone !== u.phone || old.title !== u.title) await db.users.update(old.id, { phone: u.phone, title: u.title });
   }
   const serials = new Set((await db.tractors.list()).map((t) => t.serialNumber));
   for (const { startReading: _start, ...tr } of DEMO_TRACTORS) {

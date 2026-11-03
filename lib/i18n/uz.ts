@@ -44,6 +44,8 @@ export const uz = {
     lastAdmin: "Oxirgi faol administratorni o'zgartirib bo'lmaydi",
   },
   dashboard: {
+    issueWaiting: (p: string) => `Nosozlik: ${p} — usta kutilmoqda`,
+    issueRepair: (p: string, who: string) => `Nosozlik: ${p} — ta'mirlanmoqda (${who})`,
     title: 'Traktorlar',
     add: "Qo'shish",
     menu: 'Menyu',

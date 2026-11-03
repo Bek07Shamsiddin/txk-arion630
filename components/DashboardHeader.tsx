@@ -1,6 +1,7 @@
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { Plus, User, BarChart3, Clock, Bell, Wrench, Menu } from 'lucide-react-native';
 import { t } from '@/lib/i18n/uz';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface DashboardHeaderProps {
   onAddTractor: () => void;
@@ -23,8 +24,9 @@ export function DashboardHeader({
   onNavigator,
   unreadCount = 0
 }: DashboardHeaderProps) {
+  const insets = useSafeAreaInsets();
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top + 12, paddingLeft: insets.left + 16, paddingRight: insets.right + 16 }]}>
       <View style={styles.topRow}>
         <Text style={styles.title}>{t.dashboard.title}</Text>
         <TouchableOpacity

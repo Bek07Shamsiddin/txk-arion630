@@ -6,11 +6,12 @@ import { cardStatusLine, forecastLine, STATUS_COLORS } from '@/lib/tractorCard';
 interface TractorCardProps {
   view: TractorView;
   onPress: () => void;
+  issue?: string | null;
 }
 
 const fmt = (n: number) => String(Math.round(n * 10) / 10);
 
-export function TractorCard({ view, onPress }: TractorCardProps) {
+export function TractorCard({ view, onPress, issue }: TractorCardProps) {
   const { tractor } = view;
   const statusColor = STATUS_COLORS[view.color];
   const statusLine = cardStatusLine(view.next);
@@ -47,6 +48,7 @@ export function TractorCard({ view, onPress }: TractorCardProps) {
           </View>
         </View>
 
+        {issue ? <Text style={{ color: '#b45309', fontWeight: '600', marginBottom: 6 }}>{issue}</Text> : null}
         <Text style={styles.location}>
           {tractor.location} · {t.dashboard.operator}: {tractor.operatorName}
         </Text>
