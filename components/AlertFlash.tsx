@@ -3,6 +3,22 @@ import { Animated, Platform, StyleSheet, Vibration } from 'react-native';
 import { db } from '@/lib/db';
 import type { AppNotification } from '@/lib/db/schema';
 import { onLiveTick } from '@/lib/live/fieldWork';
+import { getAlertPrefs } from '@/lib/live/alertPrefs';
+import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
+
+let player: ReturnType<typeof createAudioPlayer> | null = null;
+function siren() {
+  try {
+    if (!player) {
+      setAudioModeAsync({ playsInSilentMode: true }).catch(() => undefined);
+      player = createAudioPlayer(require('../assets/sounds/siren.wav'));
+    }
+    player.seekTo(0);
+    player.play();
+  } catch {
+    // ovoz chiqmasa ham rang ishlaydi
+  }
+}
 
 // Algoritm bo'yicha ogohlantirish: ovoz + ekran chetida rangli "sirena" yonishi.
 const LEVEL: Partial<Record<AppNotification['kind'], { color: string; rank: number; freq: number }>> = {
@@ -12,11 +28,11 @@ const LEVEL: Partial<Record<AppNotification['kind'], { color: string; rank: numb
   escalation: { color: '#7f1d1d', rank: 4, freq: 988 },
 };
 
-function beep(freq: number, repeats: number) {
-  if (Platform.OS !== 'web') {
-    Vibration.vibrate(Array.from({ length: repeats * 2 }, () => 250));
-    return;
-  }
+async function beep(freq: number, repeats: number) {
+  const prefs = await getAlertPrefs();
+  if (prefs.vibration && Platform.OS !== 'web') Vibration.vibrate(Array.from({ length: repeats * 2 }, () => 250));
+  if (!prefs.sound) return;
+  if (Platform.OS !== 'web') return siren();
   try {
     const Ctx = (window as any).AudioContext || (window as any).webkitAudioContext;
     const ctx = new Ctx();
@@ -55,7 +71,7 @@ export function AlertFlash() {
         .sort((a, b) => b.rank - a.rank)[0];
       if (!top) return;
       setColor(top.color);
-      beep(top.freq, top.rank + 1);
+      beep(top.freq, top.rank + 1).catch(() => undefined);
       anim.setValue(0);
       Animated.loop(
         Animated.sequence([

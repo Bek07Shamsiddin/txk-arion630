@@ -4,6 +4,9 @@ import { ArrowLeft, ChevronRight } from 'lucide-react-native';
 import { useSession } from '@/lib/session';
 import { Permissions } from '@/lib/permissions';
 import { t } from '@/lib/i18n/uz';
+import { Switch } from 'react-native';
+import { useEffect, useState } from 'react';
+import { getAlertPrefs, setAlertPrefs, type AlertPrefs } from '@/lib/live/alertPrefs';
 import { goBack } from '@/lib/nav';
 
 type SessionUser = ReturnType<typeof useSession>['user'];
@@ -31,6 +34,15 @@ export default function NavigatorScreen() {
   const router = useRouter();
   const { user } = useSession();
   const items = ITEMS.filter((i) => i.visible(user));
+  const [prefs, setPrefs] = useState<AlertPrefs>({ sound: true, vibration: true });
+  useEffect(() => {
+    getAlertPrefs().then(setPrefs).catch(() => undefined);
+  }, []);
+  const toggle = (k: keyof AlertPrefs) => {
+    const next = { ...prefs, [k]: !prefs[k] };
+    setPrefs(next);
+    setAlertPrefs(next).catch(() => undefined);
+  };
 
   return (
     <View style={styles.container}>
@@ -48,6 +60,15 @@ export default function NavigatorScreen() {
             <ChevronRight size={20} color="#9ca3af" />
           </TouchableOpacity>
         ))}
+        <Text style={[styles.itemText, { marginTop: 16, marginBottom: 4 }]}>{t.menu.alertSettings}</Text>
+        <View style={styles.item}>
+          <Text style={styles.itemText}>{t.menu.sound}</Text>
+          <Switch value={prefs.sound} onValueChange={() => toggle('sound')} />
+        </View>
+        <View style={styles.item}>
+          <Text style={styles.itemText}>{t.menu.vibration}</Text>
+          <Switch value={prefs.vibration} onValueChange={() => toggle('vibration')} />
+        </View>
       </ScrollView>
     </View>
   );

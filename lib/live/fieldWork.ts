@@ -1,13 +1,32 @@
 import { todayLocal } from '../core/dates';
 import { db } from '../db';
-import { DEMO_TRACTORS } from '../db/demoSeed';
+import { DEMO_INITIAL_READING, DEMO_TRACTORS } from '../db/demoSeed';
+import { refreshAlerts } from '../services/alerts';
 import { recordMotoReading } from '../services/motoReadings';
 import { recordService } from '../services/service';
 import { getTractorView } from '../services/tractors';
 
-// Jonli ish: har TICK_MS da 1 ish soati o'tadi; kunduzi (06–20) traktorlar ishlaydi, kechasi to'xtaydi.
+/*
+ * Jonli dala ishi — har ochilishda ssenariy boshidan boshlanadi (TICK_MS = 5 s, 12 qadam = 1 daqiqa):
+ *  - 0-daqiqa: Akrombek traktori muddati o'tgan, Islomjon traktori yaqinlashmoqda, boshqalari me'yorida;
+ *  - ~2-daqiqa: Adhamjon traktori "yaqinlashmoqda" holatiga o'tadi;
+ *  - ~5-daqiqa: Islomjon traktori muddati o'tadi (TXK kerak), Akrombek — eskalatsiya;
+ *  - 8-daqiqa: mexaniklar ikkala traktorga TXK bajaradi → yangi sikl;
+ *  - keyin: real ritm — 250 soatlik sikl taxminan bir sutkaga yoyiladi, ish faqat kunduzi (06–20).
+ */
 export const TICK_MS = 5000;
+export const SCRIPT_TICKS = 96; // 8 daqiqa
+const REAL_RATE = 250 / (24 * 720); // ~1 sutkada bir sikl
 const OPS = ['plowing', 'cultivation', 'sowing', 'transport', 'disking'];
+
+type Plan = { serial: string; start: number; rate: number; repairAt: number | null; mechanic: string };
+export const PLAN: Plan[] = [
+  { serial: DEMO_TRACTORS[0].serialNumber, start: 180, rate: 0.1, repairAt: null, mechanic: 'Inomjonov Mansurbek' },
+  { serial: DEMO_TRACTORS[1].serialNumber, start: 222, rate: 0.125, repairAt: null, mechanic: 'Inomjonov Mansurbek' },
+  { serial: DEMO_TRACTORS[2].serialNumber, start: 238, rate: 0.2, repairAt: SCRIPT_TICKS, mechanic: 'Yodgoraliyev Nozimjon' },
+  { serial: DEMO_TRACTORS[3].serialNumber, start: 262, rate: 0.25, repairAt: SCRIPT_TICKS, mechanic: 'Rahmatov Islomjon' },
+];
+
 const listeners = new Set<() => void>();
 export const onLiveTick = (fn: () => void) => {
   listeners.add(fn);
@@ -16,71 +35,118 @@ export const onLiveTick = (fn: () => void) => {
   };
 };
 
-let simHour = new Date().getHours();
-let started = false;
-let busy = false;
+const isDay = (d = new Date()) => d.getHours() >= 6 && d.getHours() < 20;
 
-async function tick(): Promise<void> {
-  simHour = (simHour + 1) % 24;
-  const day = simHour >= 6 && simHour < 20;
-  const users = await db.users.list();
-  const mechanic = users.find((u) => u.role === 'technician');
+/** Ssenariyni boshidan qo'yadi: shu traktorlarning yozuvlari tozalanib, boshlang'ich holat yoziladi. */
+export async function resetScenario(today = todayLocal()): Promise<void> {
   const tractors = await db.tractors.list();
-  const readings = await db.motoReadings.list();
-  const today = todayLocal();
-  for (const d of DEMO_TRACTORS) {
+  const users = await db.users.list();
+  const ids = new Set<string>();
+  for (const [i, d] of DEMO_TRACTORS.entries()) {
     const tr = tractors.find((x) => x.serialNumber === d.serialNumber);
-    const op = users.find((u) => u.name === d.operatorName);
+    if (!tr) continue;
+    ids.add(tr.id);
+    await db.tractors.update(tr.id, { initialReading: DEMO_INITIAL_READING, operatorName: d.operatorName, registrationDate: today });
+    void i;
+  }
+  for (const c of [db.motoReadings, db.serviceRecords, db.notifications, db.partsRequests] as const) {
+    const all = await (c as typeof db.motoReadings).list();
+    await (c as typeof db.motoReadings).replaceAll(all.filter((x) => !ids.has((x as { tractorId: string }).tractorId)));
+  }
+  for (const [i, p] of PLAN.entries()) {
+    const tr = tractors.find((x) => x.serialNumber === p.serial);
+    const op = users.find((u) => u.name === DEMO_TRACTORS[i].operatorName);
     if (!tr || !op) continue;
-    const mine = readings.filter((r) => r.tractorId === tr.id);
-    const first = mine.length === 0;
-    if (!first && !day) continue;
-    const last = first ? tr.initialReading : Math.max(...mine.map((r) => r.reading));
     await recordMotoReading({
       tractorId: tr.id,
       date: today,
-      reading: first ? d.startReading : last + 1,
-      shares: [{ operationTypeId: OPS[(simHour + d.startReading) % OPS.length], hours: 0 }],
+      reading: p.start,
+      shares: [{ operationTypeId: OPS[i], hours: 0 }],
       fuelLiters: null,
-      note: first ? null : `Daladagi ish, ${simHour}:00`,
+      note: 'Smena boshi',
       userId: op.id,
       confirmOver24h: true,
     });
-    // Eskalatsiyadan keyin mexanik TXK ni bajaradi → keyingi intervalga o'tiladi.
-    const escalated = (await db.notifications.list()).filter(
+  }
+}
+
+/** Bitta qadam (tick — ssenariy boshidan beri qadamlar soni). */
+export async function liveTick(tick: number, today = todayLocal(), now = new Date()): Promise<void> {
+  const tractors = await db.tractors.list();
+  const users = await db.users.list();
+  const readings = await db.motoReadings.list();
+  for (const [i, p] of PLAN.entries()) {
+    const tr = tractors.find((x) => x.serialNumber === p.serial);
+    const op = users.find((u) => u.name === DEMO_TRACTORS[i].operatorName);
+    if (!tr || !op) continue;
+    const mine = readings.filter((r) => r.tractorId === tr.id);
+    const last = mine.length ? Math.max(...mine.map((r) => r.reading)) : tr.initialReading;
+    const scripted = tick <= SCRIPT_TICKS;
+    // Ssenariy davomida reja bo'yicha, keyin real ritm bilan (faqat kunduzi).
+    const target = scripted ? p.start + p.rate * tick : last + (isDay(now) ? REAL_RATE : 0);
+    const next = Math.round(target * 10) / 10;
+    if (next - last >= 0.5 || (scripted && tick === SCRIPT_TICKS && next > last)) {
+      await recordMotoReading({
+        tractorId: tr.id,
+        date: today,
+        reading: next,
+        shares: [{ operationTypeId: OPS[(i + tick) % OPS.length], hours: 0 }],
+        fuelLiters: null,
+        note: `Daladagi ish, ${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`,
+        userId: op.id,
+        confirmOver24h: true,
+      });
+    } else {
+      await refreshAlerts(tr.id, today);
+    }
+    const v = await getTractorView(tr.id, today);
+    const due = v.recommended;
+    const mech = users.find((u) => u.name === p.mechanic) ?? users.find((u) => u.role === 'technician');
+    const scriptedRepair = p.repairAt !== null && tick === p.repairAt;
+    const escalated = !scripted && (await db.notifications.list()).some(
       (n) => n.tractorId === tr.id && n.kind === 'escalation' && !n.isRead,
     );
-    if (!mechanic || escalated.length === 0) continue;
-    const v = await getTractorView(tr.id, today);
-    const level = (await db.regulation.list()).find((l) => l.code === v.recommended);
+    if (!due || !mech || !(scriptedRepair || escalated)) continue;
+    const level = (await db.regulation.list()).find((l) => l.code === due);
     if (!level) continue;
     await recordService({
       tractorId: tr.id,
       levelCode: level.code,
       date: today,
       durationHours: level.durationHours,
-      usedParts: level.parts.map((p) => ({ name: p.name, quantity: p.quantity })),
-      note: 'Eskalatsiyadan keyin bajarildi',
+      usedParts: level.parts.map((x) => ({ name: x.name, quantity: x.quantity })),
+      note: 'Rejali texnik xizmat bajarildi',
       photoUris: [],
-      userId: mechanic.id,
+      userId: mech.id,
     });
-    for (const n of escalated) await db.notifications.update(n.id, { isRead: true });
+    for (const n of await db.notifications.list()) {
+      if (n.tractorId === tr.id && !n.isRead && n.kind !== 'mechanic') await db.notifications.update(n.id, { isRead: true });
+    }
   }
 }
 
+let started = false;
 export function startFieldWork(): void {
   if (started) return;
   started = true;
-  setInterval(async () => {
-    if (busy) return;
-    busy = true;
-    try {
-      await tick();
+  let tick = 0;
+  let busy = false;
+  resetScenario()
+    .catch(() => undefined)
+    .then(() => {
       listeners.forEach((fn) => fn());
-    } catch {
-      // jonli ish xatosi ilovani to'xtatmasin
-    } finally {
-      busy = false;
-    }
-  }, TICK_MS);
+      setInterval(async () => {
+        if (busy) return;
+        busy = true;
+        try {
+          tick += 1;
+          await liveTick(tick);
+          listeners.forEach((fn) => fn());
+        } catch {
+          // jonli ish xatosi ilovani to'xtatmasin
+        } finally {
+          busy = false;
+        }
+      }, TICK_MS);
+    });
 }

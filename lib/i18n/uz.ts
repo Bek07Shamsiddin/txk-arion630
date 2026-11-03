@@ -100,6 +100,9 @@ export const uz = {
     equivShort: 'kelt.',
   },
   menu: {
+    alertSettings: 'Ogohlantirish sozlamalari',
+    sound: 'Ovozli signal',
+    vibration: 'Vibratsiya',
     title: 'Menyu',
     hoursLog: 'Moto-soat kiritish',
     service: 'TXK tarixi',
