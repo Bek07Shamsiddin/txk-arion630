@@ -12,6 +12,8 @@ Talab: [Node.js](https://nodejs.org) 20 yoki undan yangi (LTS) va VS Code.
 
 **VS Code orqali:**
 
+> PowerShell’da *“running scripts is disabled”* xatosi chiqsa: `npm` o‘rniga `npm.cmd` yozing (masalan `npm.cmd install`) yoki terminalni **Command Prompt** ga almashtiring (loyiha sozlamasida standart qilib qo‘yilgan).
+
 1. VS Code → *File → Open Folder…* → `TXK_Arion630` papkasini oching.
 2. Terminal oching (*Terminal → New Terminal*) va bir marta:
    ```
