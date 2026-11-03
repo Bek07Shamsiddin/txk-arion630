@@ -68,7 +68,7 @@ export default function SelectUserScreen() {
           <View style={[styles.dot, { backgroundColor: getRoleColor(u.role) }]} />
           <View style={{ flex: 1 }}>
             <Text style={styles.name}>{u.name}</Text>
-            <Text style={styles.role}>{t.roles[u.role]}</Text>
+            <Text style={styles.role}>{u.title ? `${u.title} · ` : ''}{t.roles[u.role]}{u.phone ? ` · ${u.phone}` : ''}</Text>
           </View>
         </TouchableOpacity>
       ))}

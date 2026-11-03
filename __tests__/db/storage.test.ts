@@ -1,3 +1,5 @@
+import { DEMO_TRACTORS, DEMO_USERS } from '../../lib/db/demoSeed';
+import { hashPin } from '../../lib/sessionStore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { enqueue, createCollection, StorageError, CorruptDataError, newId } from '../../lib/db/storage';
 import { db, initDb } from '../../lib/db';
@@ -67,17 +69,17 @@ describe('createCollection', () => {
 describe('initDb', () => {
   it('bir vaqtdagi chaqiruvlar ikki marta seed qilmaydi', async () => {
     await Promise.all([initDb(), initDb()]);
-    expect(await db.tractors.list()).toHaveLength(1);
-    expect(await db.users.list()).toHaveLength(1);
+    expect(await db.tractors.list()).toHaveLength(DEMO_TRACTORS.length);
+    expect(await db.users.list()).toHaveLength(DEMO_USERS.length);
   });
 
   it('ikki marta chaqirilsa seed takrorlanmaydi', async () => {
     await initDb();
     await initDb();
-    expect(await db.tractors.list()).toHaveLength(1);
+    expect(await db.tractors.list()).toHaveLength(DEMO_TRACTORS.length);
     expect((await db.tractors.list())[0].model).toBe('Claas Arion 630');
-    expect(await db.users.list()).toHaveLength(1);
-    expect((await db.users.list())[0]).toMatchObject({ name: 'Administrator', role: 'admin', pinHash: null });
+    expect(await db.users.list()).toHaveLength(DEMO_USERS.length);
+    expect((await db.users.list())[0]).toMatchObject({ name: 'Ilxomjon Xolmirzayev', role: 'admin', phone: '+998 99 977 7555', pinHash: hashPin('1111') });
     expect((await db.regulation.list()).length).toBeGreaterThan(0);
     expect((await db.operationTypes.list()).length).toBeGreaterThan(0);
     expect((await db.settings.get()).gamma).toBe(1);

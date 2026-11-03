@@ -33,3 +33,6 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# ichma-ich ochilgan zip nusxasi
+/TXK_Arion630/

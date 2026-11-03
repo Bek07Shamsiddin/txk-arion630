@@ -13,6 +13,8 @@ import type {
 import { COLLECTION_NAMES, SCHEMA_VERSION } from './schema';
 import { colKey, CorruptDataError, createCollection, enqueue, readJson, writeJson } from './storage';
 import { todayLocal } from '../core/dates';
+import { DEMO_TRACTORS, DEMO_USERS } from './demoSeed';
+import { hashPin } from '../sessionStore';
 
 export const SETTINGS_KEY = 'doc:settings';
 export const VERSION_KEY = 'meta:schemaVersion';
@@ -69,20 +71,14 @@ async function runInit(): Promise<void> {
   await db.operationTypes.replaceAll(DEFAULT_OPERATION_TYPES);
   if ((await readJson(SETTINGS_KEY)) === null) await db.settings.set(DEFAULT_SETTINGS);
   if ((await db.users.list()).length === 0) {
-    await db.users.insert({ name: 'Administrator', role: 'admin', pinHash: null, active: true, createdAt: now });
+    for (const { pin, ...u } of DEMO_USERS) {
+      await db.users.insert({ ...u, pinHash: hashPin(pin), createdAt: now });
+    }
   }
   if ((await db.tractors.list()).length === 0) {
-    await db.tractors.insert({
-      model: 'Claas Arion 630',
-      serialNumber: 'NAMUNA-001',
-      registrationDate: todayLocal(),
-      location: '',
-      operatorName: '',
-      photoUri: null,
-      initialReading: 0,
-      status: 'active',
-      createdAt: now,
-    });
+    for (const tr of DEMO_TRACTORS) {
+      await db.tractors.insert({ ...tr, registrationDate: todayLocal(), photoUri: null, initialReading: 0, status: 'active', createdAt: now });
+    }
   }
   await enqueue(() => writeJson(VERSION_KEY, SCHEMA_VERSION));
 }

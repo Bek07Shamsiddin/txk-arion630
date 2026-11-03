@@ -9,6 +9,8 @@ export type User = {
   role: Role;
   pinHash: string | null;
   active: boolean;
+  title?: string | null;
+  phone?: string | null;
   createdAt: string;
 };
 

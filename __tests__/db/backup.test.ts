@@ -1,3 +1,4 @@
+import { DEMO_TRACTORS } from '../../lib/db/demoSeed';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { db, initDb } from '../../lib/db';
 import { exportAll, importAll, toCsv, ImportError, restoreAutoBackup, getAutoBackupInfo } from '../../lib/db/backup';
@@ -21,7 +22,7 @@ describe('backup', () => {
     await expect(importAll('{"foo":1}')).rejects.toBeInstanceOf(ImportError);
     await expect(importAll('buzuq')).rejects.toBeInstanceOf(ImportError);
     expect(await db.tractors.list()).toEqual(before);
-    expect(before).toHaveLength(1);
+    expect(before).toHaveLength(DEMO_TRACTORS.length);
   });
 
   it('kelajak schemaVersion rad etiladi', async () => {
@@ -34,7 +35,7 @@ describe('backup', () => {
     const { schemaVersion, settings, ...v0 } = a;
     await importAll(JSON.stringify(v0));
     expect(JSON.parse((await AsyncStorage.getItem('doc:settings')) as string)).toEqual(DEFAULT_SETTINGS);
-    expect(await db.tractors.list()).toHaveLength(1);
+    expect(await db.tractors.list()).toHaveLength(DEMO_TRACTORS.length);
   });
 
   it('import oldin backup:auto yoziladi', async () => {
@@ -42,7 +43,7 @@ describe('backup', () => {
     await importAll(JSON.stringify(a));
     const raw = await AsyncStorage.getItem('backup:auto');
     expect(raw).toBeTruthy();
-    expect(JSON.parse(JSON.parse(raw as string).raw['col:tractors'])).toHaveLength(1);
+    expect(JSON.parse(JSON.parse(raw as string).raw['col:tractors'])).toHaveLength(DEMO_TRACTORS.length);
   });
 
   it('backup:auto OLDINGI holatni saqlaydi', async () => {
@@ -61,7 +62,7 @@ describe('backup', () => {
     const before = await AsyncStorage.getAllKeys();
     await expect(importAll(JSON.stringify(bad))).rejects.toBeInstanceOf(ImportError);
     expect(await AsyncStorage.getItem('backup:auto')).toBeNull();
-    expect(await db.tractors.list()).toHaveLength(1);
+    expect(await db.tractors.list()).toHaveLength(DEMO_TRACTORS.length);
     expect(await AsyncStorage.getAllKeys()).toEqual(before);
   });
 
@@ -75,7 +76,7 @@ describe('backup', () => {
     const A = await exportAll();
     await AsyncStorage.setItem('col:tractors', '{buzuq');
     await importAll(JSON.stringify(A));
-    expect(await db.tractors.list()).toHaveLength(1);
+    expect(await db.tractors.list()).toHaveLength(DEMO_TRACTORS.length);
     const auto = JSON.parse((await AsyncStorage.getItem('backup:auto')) as string);
     expect(auto.raw['col:tractors']).toBe('{buzuq');
   });
