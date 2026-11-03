@@ -29,7 +29,7 @@ Talab: [Node.js](https://nodejs.org) 20 yoki undan yangi (LTS) va VS Code.
 
 VS Code’da tayyor vazifalar ham bor: *Terminal → Run Task…* → “1. Paketlarni o‘rnatish”, “2. Ilovani brauzerda ochish”, “4. Testlar”.
 
-Namunaviy foydalanuvchilar (hakamlarga ko‘rsatish uchun; PIN oson va bir martalik — kirgach admin “Foydalanuvchilar” ekranida almashtiradi):
+Foydalanuvchilar ( PIN oson va bir martalik — kirgach admin “Foydalanuvchilar” ekranida almashtiradi):
 
 | Foydalanuvchi | Rol | PIN |
 |---|---|---|
@@ -37,6 +37,12 @@ Namunaviy foydalanuvchilar (hakamlarga ko‘rsatish uchun; PIN oson va bir marta
 | Inomjonov Mansurbek | Texnik (mexanik) | 2222 |
 | Yodgoraliyev Nozimjon | Texnik (mexanik) | 3333 |
 | Rahmatov Islomjon | Texnik (mexanik) | 4444 |
+| Ulug'bek (+998 90 693 53 50) | Operator | 5555 |
+| Adhamjon (+998 91 178 31 01) | Operator | 6666 |
+| Islomjon (+998 99 977 55 25) | Operator | 7777 |
+| Akrombek (+998 90 215 31 91) | Operator | 8888 |
+
+Ilova ochiq turganda traktorlar real vaqtda ishlaydi: har 5 soniyada 1 ish soati (kunduzi 06–20), ogohlantirishlar ovoz va ekran chetidagi rangli signal bilan chiqadi.
 
 Namunaviy traktorlar: Mingbuloq tumani, Claas Arion 630/630C — A2003495, A2003707, A2004017, A2004100. Ma’lumotlar brauzer/telefon xotirasida saqlanadi; tozalash uchun brauzerda sayt ma’lumotlarini o‘chiring.
 

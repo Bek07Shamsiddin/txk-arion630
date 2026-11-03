@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { View, StyleSheet, FlatList, ActivityIndicator, Text, RefreshControl } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { onLiveTick } from '@/lib/live/fieldWork';
 import { useRouter } from 'expo-router';
 import { db } from '@/lib/db';
 import { todayLocal } from '@/lib/core/dates';
@@ -43,6 +44,9 @@ export default function DashboardScreen() {
   useFocusEffect(
     useCallback(() => {
       load();
+      return onLiveTick(() => {
+        load();
+      });
     }, [load]),
   );
 

@@ -13,7 +13,7 @@ import type {
 import { COLLECTION_NAMES, SCHEMA_VERSION } from './schema';
 import { colKey, CorruptDataError, createCollection, enqueue, readJson, writeJson } from './storage';
 import { todayLocal } from '../core/dates';
-import { DEMO_TRACTORS, DEMO_USERS } from './demoSeed';
+import { DEMO_INITIAL_READING, DEMO_TRACTORS, DEMO_USERS } from './demoSeed';
 import { hashPin } from '../sessionStore';
 
 export const SETTINGS_KEY = 'doc:settings';
@@ -76,8 +76,8 @@ async function runInit(): Promise<void> {
     }
   }
   if ((await db.tractors.list()).length === 0) {
-    for (const tr of DEMO_TRACTORS) {
-      await db.tractors.insert({ ...tr, registrationDate: todayLocal(), photoUri: null, initialReading: 0, status: 'active', createdAt: now });
+    for (const { startReading: _start, ...tr } of DEMO_TRACTORS) {
+      await db.tractors.insert({ ...tr, registrationDate: todayLocal(), photoUri: null, initialReading: DEMO_INITIAL_READING, status: 'active', createdAt: now });
     }
   }
   await enqueue(() => writeJson(VERSION_KEY, SCHEMA_VERSION));
