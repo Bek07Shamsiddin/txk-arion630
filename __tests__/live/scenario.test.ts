@@ -1,3 +1,4 @@
+import { readinessByTractor } from '../../lib/reports';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { db, initDb } from '../../lib/db';
 import { DEMO_TRACTORS } from '../../lib/db/demoSeed';
@@ -68,7 +69,7 @@ test("operatorlar nomidan yozuvlar kiritiladi; kechasi traktorlar ishlamaydi", a
 test("qayta ochilganda ssenariy boshidan boshlanadi", async () => {
   await runTo(1, SCRIPT_TICKS);
   await resetScenario(TODAY);
-  expect(await db.serviceRecords.list()).toHaveLength(0);
+  expect((await db.serviceRecords.list()).every((r) => r.levelCode === 'O100')).toBe(true);
   const s = await states();
   expect(count(s, 'red')).toBeGreaterThanOrEqual(1);
 });
@@ -76,15 +77,17 @@ test("qayta ochilganda ssenariy boshidan boshlanadi", async () => {
 test("nosozlik sikli: operator xabar beradi → usta ta'mirlaydi → ta'mir tugaydi (jadvaldagi nosozlik turi bilan)", async () => {
   await runTo(1, 12);
   let reqs = await db.mechanicRequests.list();
+  reqs = reqs.filter((r) => r.status !== 'completed');
   expect(reqs).toHaveLength(1);
   expect(['Taqsimlash vali', 'Haydovchi nasos', 'Maxovik']).toContain(reqs[0].problem);
   await runTo(13, 18);
-  reqs = await db.mechanicRequests.list();
+  const id = reqs[0].id;
+  reqs = (await db.mechanicRequests.list()).filter((r) => r.id === id);
   expect(reqs[0].status).toBe('in_progress');
   const tech = (await db.users.list()).find((u) => u.id === reqs[0].technicianId)!;
   expect(tech.role).toBe('technician');
   await runTo(19, 42);
-  expect((await db.mechanicRequests.list())[0].status).toBe('completed');
+  expect((await db.mechanicRequests.list()).find((r) => r.id === id)!.status).toBe('completed');
 });
 
 test("ssenariydan keyin real vaqt: 1 soatda ~1 moto-soat, ko'p muddati o'tgan to'planmaydi", async () => {
@@ -97,3 +100,19 @@ test("ssenariydan keyin real vaqt: 1 soatda ~1 moto-soat, ko'p muddati o'tgan to
   grown.forEach((g) => expect(g).toBeLessThanOrEqual(1.1));
   expect(count(await states(), 'red')).toBeLessThanOrEqual(1);
 }, 120000);
+
+test("hisobot real: o'tgan oyda TXK va bekor turish soatlari bor, K_tt < 1", async () => {
+  const rows = await readinessByTractor('2026-10-04', TODAY);
+  const mine = rows.filter((r) => r.work > 0);
+  expect(mine.every((r) => r.service > 0 && r.downtime > 0)).toBe(true);
+  expect(mine.every((r) => (r.kTt ?? 1) < 1)).toBe(true);
+});
+
+test("nosozlik paytida traktor moto-soati oshmaydi", async () => {
+  await runTo(1, 12);
+  const broken = (await db.mechanicRequests.list()).find((r) => r.status !== 'completed')!;
+  const reading = async () => (await listTractorViews(TODAY)).find((v) => v.tractor.id === broken.tractorId)!.currentReading;
+  const r0 = await reading();
+  await runTo(13, 30);
+  expect(await reading()).toBe(r0);
+});

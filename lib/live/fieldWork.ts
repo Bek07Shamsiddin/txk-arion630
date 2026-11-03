@@ -51,6 +51,7 @@ const isDay = (d = new Date()) => d.getHours() >= 6 && d.getHours() < 20;
 /** Ssenariyni boshidan qo'yadi: shu traktorlarning yozuvlari tozalanib, boshlang'ich holat yoziladi. */
 export async function resetScenario(today = todayLocal()): Promise<void> {
   carry.length = 0;
+  paused.length = 0;
   openedAtTick.clear();
   const tractors = await db.tractors.list();
   const users = await db.users.list();
@@ -66,6 +67,7 @@ export async function resetScenario(today = todayLocal()): Promise<void> {
     const all = await (c as typeof db.motoReadings).list();
     await (c as typeof db.motoReadings).replaceAll(all.filter((x) => !ids.has((x as { tractorId: string }).tractorId)));
   }
+  await seedHistory(today, tractors, users);
   for (const [i, p] of PLAN.entries()) {
     const tr = tractors.find((x) => x.serialNumber === p.serial);
     const op = users.find((u) => u.name === DEMO_TRACTORS[i].operatorName);
@@ -98,7 +100,9 @@ export async function liveTick(tick: number, today = todayLocal(), now = new Dat
     // Ssenariy davomida reja bo'yicha, keyin real ritm bilan (faqat kunduzi).
     const openReq = (await db.mechanicRequests.list()).find((m) => m.tractorId === tr.id && m.status !== 'completed');
     const working = isDay(now) && !openReq;
-    const target = scripted ? p.start + p.rate * tick : last + (carry[i] = (carry[i] ?? 0) + (working ? REAL_RATE : 0));
+    // Nosozlik paytida traktor turadi: moto-soat oshmaydi.
+    if (scripted && openReq) paused[i] = (paused[i] ?? 0) + 1;
+    const target = scripted ? (openReq ? last : p.start + p.rate * (tick - (paused[i] ?? 0))) : last + (carry[i] = (carry[i] ?? 0) + (working ? REAL_RATE : 0));
     const next = Math.round(target * 10) / 10;
     if (!scripted && next - last >= 0.5) carry[i] = 0;
     if (next - last >= 0.5 || (scripted && tick === SCRIPT_TICKS && next > last)) {
@@ -170,6 +174,7 @@ export function startFieldWork(): void {
 
 const openedAtTick = new Map<string, number>();
 const carry: number[] = [];
+const paused: number[] = [];
 
 // Nosozlik sikli: operator xabar beradi → usta qabul qiladi (ta'mirlanmoqda) → ta'mir tugaydi.
 async function handleBreakdown(
@@ -200,5 +205,56 @@ async function handleBreakdown(
     const fault = FAULTS[n % FAULTS.length];
     const req = await createMechanicRequest({ tractorId, problem: fault, userId: operatorId });
     openedAtTick.set(req.id, tick);
+  }
+}
+
+// O'tgan oy tarixi (2023-yil Mingbuloq jadvalidagi nosozliklar va ta'mir vaqtlari, daqiqada) — hisobotlar real bo'lishi uchun.
+const HISTORY: { serial: string; daysAgo: number; problem: string; repairMin: number }[] = [
+  { serial: 'A2003495', daysAgo: 24, problem: 'Taqsimlash vali', repairMin: 1035 },
+  { serial: 'A2003495', daysAgo: 9, problem: 'Old ko‘prik yig‘ilgan', repairMin: 150 },
+  { serial: 'A2003707', daysAgo: 22, problem: 'Maxovik', repairMin: 750 },
+  { serial: 'A2003707', daysAgo: 6, problem: 'Old ko‘prik yig‘ilgan', repairMin: 150 },
+  { serial: 'A2004017', daysAgo: 15, problem: 'Starter va akkumlyator/simlar', repairMin: 60 },
+  { serial: 'A2004017', daysAgo: 4, problem: 'Balon va diska, g‘ildirak', repairMin: 165 },
+  { serial: 'A2004100', daysAgo: 20, problem: 'Haydovchi nasos', repairMin: 90 },
+];
+
+function daysBefore(today: string, n: number): string {
+  const d = new Date(today + 'T08:00:00');
+  d.setDate(d.getDate() - n);
+  return d.toISOString();
+}
+
+async function seedHistory(
+  today: string,
+  tractors: { id: string; serialNumber: string }[],
+  users: { id: string; name: string; role: string }[],
+): Promise<void> {
+  const techs = users.filter((u) => u.role === 'technician');
+  const o100 = (await db.regulation.list()).find((l) => l.code === 'O100');
+  for (const [k, h] of HISTORY.entries()) {
+    const tr = tractors.find((x) => x.serialNumber === h.serial);
+    const i = DEMO_TRACTORS.findIndex((d) => d.serialNumber === h.serial);
+    const op = users.find((u) => u.name === DEMO_TRACTORS[i]?.operatorName);
+    const tech = techs[k % Math.max(1, techs.length)];
+    if (!tr || !op || !tech) continue;
+    const opened = daysBefore(today, h.daysAgo);
+    const closed = new Date(new Date(opened).getTime() + h.repairMin * 60_000).toISOString();
+    await db.mechanicRequests.insert({
+      tractorId: tr.id, problem: h.problem, status: 'completed', openedAt: opened, closedAt: closed,
+      userId: op.id, technicianId: tech.id, technicianNotes: 'Nosozlik bartaraf etildi', createdAt: opened,
+    } as never);
+  }
+  // Obkatka TXK-100 o'tgan oyda bajarilgan (hisoblagichlarga ta'sir qilmaydi — bir martalik daraja).
+  for (const [i, d] of DEMO_TRACTORS.entries()) {
+    const tr = tractors.find((x) => x.serialNumber === d.serialNumber);
+    const tech = techs[i % Math.max(1, techs.length)];
+    if (!tr || !tech || !o100) continue;
+    const date = daysBefore(today, 26 - i * 2).slice(0, 10);
+    await db.serviceRecords.insert({
+      tractorId: tr.id, levelCode: 'O100', date, reading: 100, durationHours: o100.durationHours,
+      usedParts: o100.parts.map((x) => ({ name: x.name, quantity: x.quantity })), note: 'Obkatka TXK-100',
+      photoUris: [], userId: tech.id, createdAt: date + 'T09:00:00.000Z',
+    } as never);
   }
 }
