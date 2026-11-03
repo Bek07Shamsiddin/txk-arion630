@@ -200,6 +200,8 @@ export const uz = {
     kinds: {
       service_overdue: "Muddati o'tgan",
       service_soon: 'Yaqinlashmoqda',
+      service_reminder: 'Eslatma',
+      escalation: 'Eskalatsiya',
       reorder: 'Buyurtma',
       mechanic: 'Mexanik',
     },

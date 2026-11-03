@@ -94,7 +94,7 @@ export type DamageReport = {
 export type AppNotification = {
   id: string;
   tractorId: string;
-  kind: 'service_soon' | 'service_overdue' | 'reorder' | 'mechanic';
+  kind: 'service_soon' | 'service_overdue' | 'service_reminder' | 'escalation' | 'reorder' | 'mechanic';
   levelCode: string | null;
   message: string;
   dedupeKey: string;

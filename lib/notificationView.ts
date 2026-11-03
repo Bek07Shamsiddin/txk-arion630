@@ -3,6 +3,8 @@ import type { AppNotification } from './db/schema';
 const COLORS: Record<AppNotification['kind'], string> = {
   service_overdue: '#dc2626',
   service_soon: '#f59e0b',
+  service_reminder: '#ea580c',
+  escalation: '#7f1d1d',
   reorder: '#3b82f6',
   mechanic: '#6b7280',
 };
