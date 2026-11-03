@@ -5,6 +5,8 @@ import { StatusBar } from 'expo-status-bar';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { SessionProvider, useSession } from '@/lib/session';
 import { initDb } from '@/lib/db';
+import { startFieldWork } from '@/lib/live/fieldWork';
+import { AlertFlash } from '@/components/AlertFlash';
 import { CorruptDataError } from '@/lib/db/storage';
 import { BackupActions } from '@/components/BackupActions';
 import { t } from '@/lib/i18n/uz';
@@ -49,6 +51,10 @@ function RootLayoutNav({ onReload }: { onReload: () => void }) {
     }
   }, [user, loading, error, segments]);
 
+  useEffect(() => {
+    if (!loading && !error) startFieldWork();
+  }, [loading, error]);
+
   if (error instanceof CorruptDataError) return <RecoveryView onRestored={onReload} />;
   if (error) return <ErrorView message={errorMessage(error)} />;
   if (loading) {
@@ -61,6 +67,7 @@ function RootLayoutNav({ onReload }: { onReload: () => void }) {
 
   return (
     <>
+      <AlertFlash />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="select-user" options={{ headerShown: false }} />
         <Stack.Screen name="users-admin" options={{ headerShown: false }} />

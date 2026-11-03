@@ -1,4 +1,4 @@
-import { ScrollView, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { t } from '@/lib/i18n/uz';
 import type { DashboardFilter } from '@/lib/tractorCard';
 
@@ -18,7 +18,7 @@ interface FilterTabsProps {
 
 export function FilterTabs({ activeFilter, onFilterChange }: FilterTabsProps) {
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.scroll} contentContainerStyle={styles.container}>
+    <View style={styles.container}>
       {TABS.map((tab) => (
         <TouchableOpacity
           key={tab.key}
@@ -29,15 +29,14 @@ export function FilterTabs({ activeFilter, onFilterChange }: FilterTabsProps) {
           <Text style={[styles.tabText, activeFilter === tab.key && styles.tabTextActive]}>{tab.label}</Text>
         </TouchableOpacity>
       ))}
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: { flexGrow: 0, borderBottomWidth: 1, borderBottomColor: '#e5e7eb', backgroundColor: '#ffffff' },
-  container: { paddingHorizontal: 16, paddingVertical: 12, gap: 8 },
-  tab: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8, backgroundColor: '#f3f4f6', alignItems: 'center' },
+  container: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#e5e7eb', backgroundColor: '#ffffff' },
+  tab: { minHeight: 36, justifyContent: 'center', paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8, backgroundColor: '#f3f4f6', alignItems: 'center' },
   tabActive: { backgroundColor: '#1f2937' },
-  tabText: { fontSize: 13, fontWeight: '500', color: '#6b7280' },
+  tabText: { fontSize: 13, lineHeight: 18, fontWeight: '500', color: '#6b7280' },
   tabTextActive: { color: '#ffffff' },
 });

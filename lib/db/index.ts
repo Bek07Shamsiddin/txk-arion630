@@ -64,6 +64,7 @@ async function runInit(): Promise<void> {
     if (st !== null && (typeof st !== 'object' || Array.isArray(st))) throw new CorruptDataError(SETTINGS_KEY);
     // Hozircha v1 yagona sxema; kelajakda saqlangan ma'lumot migratsiyasi shu yerda.
     if (version < SCHEMA_VERSION) await enqueue(() => writeJson(VERSION_KEY, SCHEMA_VERSION));
+    await addMissingSeed();
     return;
   }
   const now = new Date().toISOString();
@@ -81,4 +82,19 @@ async function runInit(): Promise<void> {
     }
   }
   await enqueue(() => writeJson(VERSION_KEY, SCHEMA_VERSION));
+}
+
+// Eski xotira bilan ochilganda yangi boshlang'ich foydalanuvchi va traktorlarni qo'shadi (mavjudlariga tegmaydi).
+async function addMissingSeed(): Promise<void> {
+  const now = new Date().toISOString();
+  const names = new Set((await db.users.list()).map((u) => u.name));
+  for (const { pin, ...u } of DEMO_USERS) {
+    if (!names.has(u.name)) await db.users.insert({ ...u, pinHash: hashPin(pin), createdAt: now });
+  }
+  const serials = new Set((await db.tractors.list()).map((t) => t.serialNumber));
+  for (const { startReading: _start, ...tr } of DEMO_TRACTORS) {
+    if (!serials.has(tr.serialNumber)) {
+      await db.tractors.insert({ ...tr, registrationDate: todayLocal(), photoUri: null, initialReading: DEMO_INITIAL_READING, status: 'active', createdAt: now });
+    }
+  }
 }
