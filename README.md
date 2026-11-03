@@ -4,6 +4,31 @@ Claas Arion-630 traktorlariga texnik xizmat ko'rsatish (TXK) uchun to'liq oflayn
 (Expo SDK 54, React Native). Ma'lumot faqat qurilmada saqlanadi; server va internet kerak emas.
 Ilova PhD ishidagi **moslashuvchan TXK davriyligi usuli**ni amalda ko'rsatadi.
 
+## 0. Tez ishga tushirish (Windows, VS Code)
+
+Talab: [Node.js](https://nodejs.org) 20 yoki undan yangi (LTS) va VS Code.
+
+**Eng oson yo‘l:** papkadagi `ishga-tushirish.bat` faylini ikki marta bosing. U birinchi marta paketlarni o‘rnatadi (1–2 daqiqa) va ilovani brauzerda ochadi.
+
+**VS Code orqali:**
+
+1. VS Code → *File → Open Folder…* → `TXK_Arion630` papkasini oching.
+2. Terminal oching (*Terminal → New Terminal*) va bir marta:
+   ```
+   npm install
+   ```
+3. Ilovani brauzerda ochish:
+   ```
+   npm run web
+   ```
+   Brauzer o‘zi ochilmasa: http://localhost:8081
+4. Telefonda sinash (ixtiyoriy): telefonga **Expo Go** ilovasini o‘rnating, kompyuter va telefon bitta Wi‑Fi tarmog‘ida bo‘lsin, so‘ng `npm start` va terminaldagi QR kodni Expo Go bilan skanerlang.
+5. To‘xtatish: terminalda `Ctrl + C`.
+
+VS Code’da tayyor vazifalar ham bor: *Terminal → Run Task…* → “1. Paketlarni o‘rnatish”, “2. Ilovani brauzerda ochish”, “4. Testlar”.
+
+Birinchi kirishda **Administrator** ni tanlang (PIN yo‘q). Ma’lumotlar brauzer/telefon xotirasida saqlanadi; tozalash uchun brauzerda sayt ma’lumotlarini o‘chiring.
+
 ## 1. Ilova haqida
 
 Ilmiy yadro:
