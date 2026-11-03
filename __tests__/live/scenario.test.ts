@@ -87,14 +87,13 @@ test("nosozlik sikli: operator xabar beradi → usta ta'mirlaydi → ta'mir tuga
   expect((await db.mechanicRequests.list())[0].status).toBe('completed');
 });
 
-test("ssenariydan keyin ham sikl davom etadi: yangi ogohlantirish va yangi TXK chiqadi, muddati o'tgan ko'p to'planmaydi", async () => {
+test("ssenariydan keyin real vaqt: 1 soatda ~1 moto-soat, ko'p muddati o'tgan to'planmaydi", async () => {
   await runTo(1, SCRIPT_TICKS);
-  const services = (await db.serviceRecords.list()).length;
-  const notes = (await db.notifications.list()).length;
-  for (let t = SCRIPT_TICKS + 1; t <= SCRIPT_TICKS + 600; t++) {
-    await liveTick(t, TODAY, NOON);
-    if (t % 60 === 0) expect(count(await states(), 'red')).toBeLessThanOrEqual(2);
-  }
-  expect((await db.notifications.list()).length).toBeGreaterThan(notes);
-  expect((await db.serviceRecords.list()).length).toBeGreaterThan(services);
+  const before = (await listTractorViews(TODAY)).map((v) => v.currentReading);
+  await runTo(SCRIPT_TICKS + 1, SCRIPT_TICKS + 720);
+  const after = (await listTractorViews(TODAY)).map((v) => v.currentReading);
+  const grown = after.map((a, k) => a - before[k]).filter((g) => g > 0);
+  expect(grown.length).toBeGreaterThan(0);
+  grown.forEach((g) => expect(g).toBeLessThanOrEqual(1.1));
+  expect(count(await states(), 'red')).toBeLessThanOrEqual(1);
 }, 120000);

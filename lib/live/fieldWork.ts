@@ -10,8 +10,11 @@ import { acceptMechanicRequest, completeMechanicRequest, createMechanicRequest }
 // 2023-yil Mingbuloq buzilishlar jadvalidagi haqiqiy nosozlik turlari.
 export const FAULTS = ['Taqsimlash vali', 'Old ko‘prik yig‘ilgan', 'Maxovik', 'Starter va akkumlyator/simlar', 'Balon va diska, g‘ildirak', 'Haydovchi nasos'];
 export const BREAKDOWN_EVERY = 30; // 2,5 daqiqa
-const ACCEPT_AFTER = 6; // 30 s ichida usta qabul qiladi
-const REPAIR_TICKS = 24; // 2 daqiqa ta'mir
+const HOUR = 720; // 1 real soat = 720 qadam
+// Ssenariyda tez (30 s / 2 daq), keyin real: usta 30 daqiqada keladi, ta'mir 2 soat, nosozlik ~har 3 soatda.
+const acceptAfter = (scripted: boolean) => (scripted ? 6 : HOUR / 2);
+const repairTicks = (scripted: boolean) => (scripted ? 24 : 2 * HOUR);
+const REAL_BREAKDOWN_EVERY = 3 * HOUR;
 
 /*
  * Jonli dala ishi — har ochilishda ssenariy boshidan boshlanadi (TICK_MS = 5 s, 12 qadam = 1 daqiqa):
@@ -23,7 +26,8 @@ const REPAIR_TICKS = 24; // 2 daqiqa ta'mir
  */
 export const TICK_MS = 5000;
 export const SCRIPT_TICKS = 96; // 8 daqiqa
-const CYCLE_RATES = [0.35, 0.45, 0.4, 0.5]; // ssenariydan keyin: har traktor o'z ritmida, sikl ~10–15 daqiqa
+// Ssenariydan keyin real vaqt: 1 real soat ish = 1 moto-soat (faqat kunduzi 06–20).
+export const REAL_RATE = TICK_MS / 3_600_000;
 const OPS = ['plowing', 'cultivation', 'sowing', 'transport', 'disking'];
 
 type Plan = { serial: string; start: number; rate: number; repairAt: number | null; mechanic: string };
@@ -46,6 +50,8 @@ const isDay = (d = new Date()) => d.getHours() >= 6 && d.getHours() < 20;
 
 /** Ssenariyni boshidan qo'yadi: shu traktorlarning yozuvlari tozalanib, boshlang'ich holat yoziladi. */
 export async function resetScenario(today = todayLocal()): Promise<void> {
+  carry.length = 0;
+  openedAtTick.clear();
   const tractors = await db.tractors.list();
   const users = await db.users.list();
   const ids = new Set<string>();
@@ -92,8 +98,9 @@ export async function liveTick(tick: number, today = todayLocal(), now = new Dat
     // Ssenariy davomida reja bo'yicha, keyin real ritm bilan (faqat kunduzi).
     const openReq = (await db.mechanicRequests.list()).find((m) => m.tractorId === tr.id && m.status !== 'completed');
     const working = isDay(now) && !openReq;
-    const target = scripted ? p.start + p.rate * tick : last + (working ? CYCLE_RATES[i] : 0);
+    const target = scripted ? p.start + p.rate * tick : last + (carry[i] = (carry[i] ?? 0) + (working ? REAL_RATE : 0));
     const next = Math.round(target * 10) / 10;
+    if (!scripted && next - last >= 0.5) carry[i] = 0;
     if (next - last >= 0.5 || (scripted && tick === SCRIPT_TICKS && next > last)) {
       await recordMotoReading({
         tractorId: tr.id,
@@ -162,6 +169,7 @@ export function startFieldWork(): void {
 }
 
 const openedAtTick = new Map<string, number>();
+const carry: number[] = [];
 
 // Nosozlik sikli: operator xabar beradi → usta qabul qiladi (ta'mirlanmoqda) → ta'mir tugaydi.
 async function handleBreakdown(
@@ -177,15 +185,19 @@ async function handleBreakdown(
     if (!openedAtTick.has(open.id)) openedAtTick.set(open.id, tick);
     const age = tick - openedAtTick.get(open.id)!;
     const tech = users.find((u) => u.name === PLAN[i].mechanic) ?? users.find((u) => u.role === 'technician');
-    if (open.status === 'pending' && age >= ACCEPT_AFTER && tech) await acceptMechanicRequest(open.id, tech.id);
-    if (open.status === 'in_progress' && age >= ACCEPT_AFTER + REPAIR_TICKS) {
+    const sc = openedAtTick.get(open.id)! <= SCRIPT_TICKS;
+    if (open.status === 'pending' && age >= acceptAfter(sc) && tech) await acceptMechanicRequest(open.id, tech.id);
+    if (open.status === 'in_progress' && age >= acceptAfter(sc) + repairTicks(sc)) {
       await completeMechanicRequest(open.id, 'Nosozlik bartaraf etildi, traktor ishga tushirildi');
     }
     return;
   }
   // Har 2,5 daqiqada navbatdagi traktorda nosozlik (birinchisi 1-daqiqada).
-  if ((tick - 12) % BREAKDOWN_EVERY === 0 && Math.floor((tick - 12) / BREAKDOWN_EVERY) % PLAN.length === i && tick >= 12) {
-    const fault = FAULTS[Math.floor((tick - 12) / BREAKDOWN_EVERY) % FAULTS.length];
+  const every = tick <= SCRIPT_TICKS ? BREAKDOWN_EVERY : REAL_BREAKDOWN_EVERY;
+  const base = tick <= SCRIPT_TICKS ? 12 : SCRIPT_TICKS;
+  const n = Math.floor((tick - base) / every);
+  if (tick >= 12 && (tick - base) % every === 0 && tick !== SCRIPT_TICKS && n % PLAN.length === i) {
+    const fault = FAULTS[n % FAULTS.length];
     const req = await createMechanicRequest({ tractorId, problem: fault, userId: operatorId });
     openedAtTick.set(req.id, tick);
   }
