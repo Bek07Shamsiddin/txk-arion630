@@ -1,0 +1,5 @@
+{
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "files.eol": "\n",
+  "files.exclude": { "node_modules": true, "dist": true, ".expo": true }
+}

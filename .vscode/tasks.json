@@ -1,0 +1,39 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "1. Paketlarni o'rnatish (npm install)",
+      "type": "shell",
+      "command": "npm install",
+      "problemMatcher": []
+    },
+    {
+      "label": "2. Ilovani brauzerda ochish (npm run web)",
+      "type": "shell",
+      "command": "npm run web",
+      "isBackground": true,
+      "problemMatcher": [],
+      "group": { "kind": "build", "isDefault": true }
+    },
+    {
+      "label": "3. Telefonda ochish - Expo Go (npm start)",
+      "type": "shell",
+      "command": "npm start",
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "4. Testlar (npm test)",
+      "type": "shell",
+      "command": "npm test",
+      "problemMatcher": [],
+      "group": { "kind": "test", "isDefault": true }
+    },
+    {
+      "label": "5. Tiplarni tekshirish (npm run typecheck)",
+      "type": "shell",
+      "command": "npm run typecheck",
+      "problemMatcher": ["$tsc"]
+    }
+  ]
+}
