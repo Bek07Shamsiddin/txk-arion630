@@ -27,7 +27,8 @@
       "expo-asset"
     ],
     "experiments": {
-      "typedRoutes": true
+      "typedRoutes": true,
+      "baseUrl": "/txk-arion630"
     }
   }
 }
